@@ -1,0 +1,24 @@
+Cosas que debe hacer la app:
+
+    -Recibir preguntas de mercado libre paro que el vendedor pueda responderlas
+    -Programar respuestas a preguntas dependiendo de parametros de horarios por ejemplo o palabras clave
+    -Responder post venta de mercado libre en base a palabras clave
+    -Responder post venta en base a plantillas de mercado libre permitidas
+    -Ver las ventas realizadas
+    -Imprimir etiquetas de pedidos
+    -(esta en ver si es posible) crear sistema de facturacion automatico con base a los datos del cliente si subio su CSF o manual si el usuario no cuenta con el papel
+
+
+Alcance:
+
+    -Tiendas de mercado libre o personas que ya vendan ahi
+
+Limitaciones:
+
+    -El servicio de facturacion del SAT podria causar conflictos
+
+Publico objetivo:
+
+    -Tiendas de mercado libre o personas que ya vendan ahi
+
+
