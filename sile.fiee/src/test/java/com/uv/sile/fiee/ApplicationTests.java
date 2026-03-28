@@ -1,10 +1,10 @@
-package com.sile.sile_fiee;
+package com.uv.sile.fiee;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class SileFieeApplicationTests {
+class ApplicationTests {
 
 	@Test
 	void contextLoads() {
