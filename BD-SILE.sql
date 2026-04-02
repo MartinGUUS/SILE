@@ -116,6 +116,7 @@ create table if not exists resguardantes (
 drop table if exists asignaciones;
 
 create table if not exists asignaciones (
+    id_asignaciones int not null AUTO_INCREMENT primary key,
     fk_activo varchar(15) not null,
     fk_area varchar(50) not null,
     fk_resguardante int not null,

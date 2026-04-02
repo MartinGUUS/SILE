@@ -1,0 +1,33 @@
+package com.uv.sile.fiee.Service;
+
+import com.uv.sile.fiee.Entitty.Presentacion;
+import com.uv.sile.fiee.Repository.PresentacionRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class PresentacionService {
+
+    @Autowired
+    private PresentacionRepository presentacionRepository;
+
+    public List<Presentacion> findAll() {
+        return presentacionRepository.findAll();
+    }
+
+    public Optional<Presentacion> findById(String id) {
+        return presentacionRepository.findById(id);
+    }
+
+    public Presentacion save(Presentacion presentacion) {
+        return presentacionRepository.save(presentacion);
+    }
+
+    public void delete(String id) {
+        presentacionRepository.deleteById(id);
+    }
+
+}
