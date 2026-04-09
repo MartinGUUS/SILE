@@ -6,14 +6,26 @@ use SILE;
 
 drop table if exists usuarios;
 
+drop table if exists roles;
+
+create table if not exists roles (
+    id_rol int auto_increment primary key,
+    nombre varchar(50) not null,
+    descripcion varchar(100),
+    creado_en timestamp default current_timestamp,
+    actualizado_en timestamp default current_timestamp on update current_timestamp
+);
+
 create table if not exists usuarios (
     id_usuario int auto_increment primary key,
     nombre varchar(50) not null,
     apellido varchar(50) not null,
     correo varchar(50) not null,
     contrasena varchar(50) not null,
+    fk_rol int not null,
     creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
+    actualizado_en timestamp default current_timestamp on update current_timestamp,
+    foreign key (fk_rol) references roles (id_rol)
 );
 
 drop table if exists areas;
