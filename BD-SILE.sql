@@ -12,6 +12,7 @@ create table if not exists roles (
     id_rol int auto_increment primary key,
     nombre varchar(50) not null,
     descripcion varchar(100),
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -23,6 +24,7 @@ create table if not exists usuarios (
     correo varchar(50) not null,
     contrasena varchar(50) not null,
     fk_rol int not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp,
     foreign key (fk_rol) references roles (id_rol)
@@ -34,6 +36,7 @@ create table if not exists areas (
     id_area varchar(50) primary key,
     nombre varchar(50) not null,
     descripcion varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -43,6 +46,7 @@ drop table if exists presentacion;
 create table if not exists presentacion (
     id_presentacion varchar(50) primary key,
     nombre varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -52,6 +56,7 @@ drop table if exists lineas;
 create table if not exists lineas (
     id_linea varchar(50) primary key,
     nombre varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -61,6 +66,7 @@ drop table if exists marcas;
 create table if not exists marcas (
     id_marca varchar(50) primary key,
     nombre varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -70,6 +76,7 @@ drop table if exists provedores;
 create table if not exists provedores (
     id_provedor varchar(50) primary key,
     nombre varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -88,6 +95,7 @@ create table if not exists activos (
     fk_marca varchar(50) not null,
     fk_linea varchar(50) not null,
     fk_presentacion varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp,
     creado_por int not null,
@@ -106,6 +114,7 @@ create table if not exists fotos (
     id_foto int auto_increment primary key,
     fk_activo varchar(15) not null,
     foto varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp,
     creado_por int not null,
@@ -121,6 +130,7 @@ create table if not exists resguardantes (
     id_resguardante int auto_increment primary key,
     nombres varchar(50) not null,
     apellidos varchar(50) not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
@@ -132,6 +142,7 @@ create table if not exists asignaciones (
     fk_activo varchar(15) not null,
     fk_area varchar(50) not null,
     fk_resguardante int not null,
+    estado int not null default 1,
     creado_en timestamp default current_timestamp,
     actualizado_en timestamp default current_timestamp on update current_timestamp,
     creado_por int not null,
