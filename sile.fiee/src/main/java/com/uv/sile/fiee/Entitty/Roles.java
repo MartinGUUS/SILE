@@ -20,6 +20,9 @@ public class Roles {
     @Column(name = "descripcion")
     private String descripcion;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en")
     private LocalDateTime creadoEn;
 
@@ -49,6 +52,14 @@ public class Roles {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {

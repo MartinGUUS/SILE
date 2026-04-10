@@ -17,6 +17,9 @@ public class Provedores {
     @Column(name = "nombre")
     private String nombre;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -40,6 +43,14 @@ public class Provedores {
 
     public void setNombre(String nombre) {
         this.nombre = nombre;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {

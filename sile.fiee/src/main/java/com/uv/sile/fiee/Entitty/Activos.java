@@ -47,6 +47,9 @@ public class Activos {
     @Column(name = "fk_presentacion")
     private String fkPresentacion;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -148,6 +151,14 @@ public class Activos {
 
     public void setFkPresentacion(String fkPresentacion) {
         this.fkPresentacion = fkPresentacion;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {

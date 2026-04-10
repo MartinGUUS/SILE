@@ -23,6 +23,9 @@ public class Asignaciones {
     @Column(name = "fk_area")
     private String fkArea;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "fk_resguardante")
     private Integer fkResguardante;
 
@@ -63,6 +66,14 @@ public class Asignaciones {
 
     public void setFkArea(String fkArea) {
         this.fkArea = fkArea;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public Integer getFkResguardante() {

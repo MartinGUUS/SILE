@@ -29,6 +29,9 @@ public class Usuarios {
     @Column(name = "contrasena")
     private String contrasena;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -76,6 +79,14 @@ public class Usuarios {
 
     public void setContrasena(String contrasena) {
         this.contrasena = contrasena;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {

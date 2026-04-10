@@ -20,6 +20,9 @@ public class Areas {
     @Column(name = "descripcion")
     private String descripcion;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -51,6 +54,14 @@ public class Areas {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {

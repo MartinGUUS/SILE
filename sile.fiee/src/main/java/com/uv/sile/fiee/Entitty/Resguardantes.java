@@ -23,6 +23,9 @@ public class Resguardantes {
     @Column(name = "apellidos")
     private String apellidos;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -54,6 +57,14 @@ public class Resguardantes {
 
     public void setApellidos(String apellidos) {
         this.apellidos = apellidos;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {

@@ -23,6 +23,9 @@ public class Fotos {
     @Column(name = "foto")
     private String foto;
 
+    @Column(name = "estado")
+    private String estado;
+
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
@@ -60,6 +63,14 @@ public class Fotos {
 
     public void setFoto(String foto) {
         this.foto = foto;
+    }
+
+    public String getEstado() {
+        return estado;
+    }
+
+    public void setEstado(String estado) {
+        this.estado = estado;
     }
 
     public LocalDateTime getCreadoEn() {
