@@ -21,103 +21,98 @@ import java.util.Map;
 @CrossOrigin(origins = "http://localhost:4200")
 public class AuthController {
 
-    @Autowired
-    private AuthenticationManager authenticationManager;
+        @Autowired
+        private AuthenticationManager authenticationManager;
 
-    @Autowired
-    private JwtService jwtService;
+        @Autowired
+        private JwtService jwtService;
 
-    @Autowired
-    private UsuariosRepository usuariosRepository;
+        @Autowired
+        private UsuariosRepository usuariosRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+        @Autowired
+        private PasswordEncoder passwordEncoder;
 
-    // POST /auth/login
-    @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        try {
-            // 1. Autenticar con Spring Security (valida correo + contraseña con BCrypt)
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(
-                            request.getCorreo(),
-                            request.getContrasena()
-                    )
-            );
+        // POST /auth/login
+        @PostMapping("/login")
+        public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+                try {
+                        // 1. Autenticar con Spring Security (valida correo + contraseña con BCrypt)
+                        authenticationManager.authenticate(
+                                        new UsernamePasswordAuthenticationToken(
+                                                        request.getCorreo(),
+                                                        request.getContrasena()));
 
-            // 2. Buscar el usuario en la BD
-            Usuarios usuario = usuariosRepository.findByCorreo(request.getCorreo())
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                        // 2. Buscar el usuario en la BD
+                        Usuarios usuario = usuariosRepository.findByCorreo(request.getCorreo())
+                                        .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-            // 3. Generar token JWT
-            String token = jwtService.generateToken(
-                    usuario.getCorreo(),
-                    usuario.getIdUsuario(),
-                    usuario.getFkRol()
-            );
+                        // 3. Generar token JWT
+                        String token = jwtService.generateToken(
+                                        usuario.getCorreo(),
+                                        usuario.getIdUsuario(),
+                                        usuario.getFkRol());
 
-            // 4. Devolver respuesta con token y datos del usuario
-            LoginResponse response = new LoginResponse(
-                    token,
-                    usuario.getNombre(),
-                    usuario.getApellido(),
-                    usuario.getCorreo(),
-                    usuario.getIdUsuario()
-            );
+                        // 4. Devolver respuesta con token y datos del usuario
+                        LoginResponse response = new LoginResponse(
+                                        token,
+                                        usuario.getNombre(),
+                                        usuario.getApellido(),
+                                        usuario.getCorreo(),
+                                        usuario.getIdUsuario());
 
-            return ResponseEntity.ok(response);
+                        return ResponseEntity.ok(response);
 
-        } catch (BadCredentialsException e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("error", "Correo o contraseña incorrectos"));
+                } catch (BadCredentialsException e) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                        .body(Map.of("error", "Correo o contraseña incorrectos"));
+                }
         }
-    }
 
-    // POST /auth/register
-    @PostMapping("/register")
-    public ResponseEntity<?> register(@RequestBody Usuarios usuario) {
-        try {
-            // Verificar si ya existe un usuario con ese correo
-            if (usuariosRepository.findByCorreo(usuario.getCorreo()).isPresent()) {
-                return ResponseEntity.status(HttpStatus.CONFLICT)
-                        .body(Map.of("error", "Ya existe un usuario con ese correo"));
-            }
+        // POST /auth/register
+        @PostMapping("/register")
+        public ResponseEntity<?> register(@RequestBody Usuarios usuario) {
+                try {
+                        // Verificar si ya existe un usuario con ese correo
+                        if (usuariosRepository.findByCorreo(usuario.getCorreo()).isPresent()) {
+                                return ResponseEntity.status(HttpStatus.CONFLICT)
+                                                .body(Map.of("error", "Ya existe un usuario con ese correo"));
+                        }
 
-            // Encriptar la contraseña con BCrypt antes de guardar
-            usuario.setContrasena(passwordEncoder.encode(usuario.getContrasena()));
+                        // Encriptar la contraseña con BCrypt antes de guardar
+                        usuario.setContrasena(passwordEncoder.encode(usuario.getContrasena()));
 
-            // Establecer estado activo por defecto (en BD es INT, 1 = activo)
-            if (usuario.getEstado() == null) {
-                usuario.setEstado("1");
-            }
+                        // Establecer estado activo por defecto (en BD es INT, 1 = activo)
+                        if (usuario.getEstado() == null) {
+                                usuario.setEstado("1");
+                        }
 
-            // Guardar usuario
-            Usuarios nuevoUsuario = usuariosRepository.save(usuario);
+                        // Guardar usuario
+                        Usuarios nuevoUsuario = usuariosRepository.save(usuario);
 
-            // Generar token para el nuevo usuario
-            String token = jwtService.generateToken(
-                    nuevoUsuario.getCorreo(),
-                    nuevoUsuario.getIdUsuario(),
-                    nuevoUsuario.getFkRol()
-            );
+                        // Generar token para el nuevo usuario
+                        String token = jwtService.generateToken(
+                                        nuevoUsuario.getCorreo(),
+                                        nuevoUsuario.getIdUsuario(),
+                                        nuevoUsuario.getFkRol());
 
-            LoginResponse response = new LoginResponse(
-                    token,
-                    nuevoUsuario.getNombre(),
-                    nuevoUsuario.getApellido(),
-                    nuevoUsuario.getCorreo(),
-                    nuevoUsuario.getIdUsuario()
-            );
+                        LoginResponse response = new LoginResponse(
+                                        token,
+                                        nuevoUsuario.getNombre(),
+                                        nuevoUsuario.getApellido(),
+                                        nuevoUsuario.getCorreo(),
+                                        nuevoUsuario.getIdUsuario());
 
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+                        return ResponseEntity.status(HttpStatus.CREATED).body(response);
 
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of(
-                            "error", "Fallo al registrar usuario. Excepción: " + e.getMessage(), 
-                            "cause", e.getCause() != null ? e.getCause().toString() : "Unknown"
-                    ));
+                } catch (Exception e) {
+                        e.printStackTrace();
+                        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                        .body(Map.of(
+                                                        "error",
+                                                        "Fallo al registrar usuario. Excepción: " + e.getMessage(),
+                                                        "cause",
+                                                        e.getCause() != null ? e.getCause().toString() : "Unknown"));
+                }
         }
-    }
 }
