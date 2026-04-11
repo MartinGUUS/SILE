@@ -29,6 +29,9 @@ public class Usuarios {
     @Column(name = "contrasena")
     private String contrasena;
 
+    @Column(name = "fk_rol")
+    private Integer fkRol;
+
     @Column(name = "estado")
     private String estado;
 
@@ -79,6 +82,14 @@ public class Usuarios {
 
     public void setContrasena(String contrasena) {
         this.contrasena = contrasena;
+    }
+
+    public Integer getFkRol() {
+        return fkRol;
+    }
+
+    public void setFkRol(Integer fkRol) {
+        this.fkRol = fkRol;
     }
 
     public String getEstado() {

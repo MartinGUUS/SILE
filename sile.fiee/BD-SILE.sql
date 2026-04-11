@@ -4,8 +4,6 @@ create database if not exists SILE;
 
 use SILE;
 
-drop table if exists usuarios;
-
 drop table if exists roles;
 
 create table if not exists roles (
@@ -17,12 +15,29 @@ create table if not exists roles (
     actualizado_en timestamp default current_timestamp on update current_timestamp
 );
 
+insert into
+    roles (nombre, descripcion)
+values (
+        'Administrador',
+        'Administrador del sistema'
+    ),
+    (
+        'Servicio social',
+        'Usuario del sistema'
+    ),
+    (
+        'Personal de confianza',
+        'Usuario del sistema'
+    );
+
+drop table if exists usuarios;
+
 create table if not exists usuarios (
     id_usuario int auto_increment primary key,
     nombre varchar(50) not null,
     apellido varchar(50) not null,
     correo varchar(50) not null,
-    contrasena varchar(50) not null,
+    contrasena varchar(150) not null,
     fk_rol int not null,
     estado int not null default 1,
     creado_en timestamp default current_timestamp,

@@ -7,9 +7,13 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface UsuariosRepository extends JpaRepository<Usuarios, Integer> {
+
+    // Buscar usuario por correo (para login)
+    Optional<Usuarios> findByCorreo(String correo);
 
     // ejemplo
     @Query(value = "SELECT * FROM usuarios WHERE nombre LIKE %:fragmento% OR apellido LIKE %:fragmento2%", nativeQuery = true)
