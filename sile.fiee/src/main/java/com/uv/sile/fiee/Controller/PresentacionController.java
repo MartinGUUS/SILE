@@ -56,4 +56,17 @@ public class PresentacionController {
         }
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Presentacion> cambiarEstado(@PathVariable String id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Presentacion> presentacionOptional = presentacionService.findById(id);
+        if (presentacionOptional.isPresent()) {
+            Presentacion presentacion = presentacionOptional.get();
+            if (updates.containsKey("estado")) {
+                presentacion.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(presentacionService.save(presentacion));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

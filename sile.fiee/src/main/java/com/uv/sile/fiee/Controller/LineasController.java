@@ -55,4 +55,17 @@ public class LineasController {
         }
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Lineas> cambiarEstado(@PathVariable String id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Lineas> lineaOptional = lineasService.findById(id);
+        if (lineaOptional.isPresent()) {
+            Lineas linea = lineaOptional.get();
+            if (updates.containsKey("estado")) {
+                linea.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(lineasService.save(linea));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

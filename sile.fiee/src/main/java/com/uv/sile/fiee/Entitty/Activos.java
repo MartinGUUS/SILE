@@ -2,8 +2,6 @@ package com.uv.sile.fiee.Entitty;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -13,8 +11,7 @@ import java.time.LocalDateTime;
 public class Activos {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_activo")
+    @Column(name = "no_activo")
     private String idActivo;
 
     @Column(name = "nombre")

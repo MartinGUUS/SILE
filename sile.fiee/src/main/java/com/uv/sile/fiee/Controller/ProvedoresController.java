@@ -56,4 +56,17 @@ public class ProvedoresController {
         }
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Provedores> cambiarEstado(@PathVariable String id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Provedores> provedorOptional = provedoresService.findById(id);
+        if (provedorOptional.isPresent()) {
+            Provedores provedor = provedorOptional.get();
+            if (updates.containsKey("estado")) {
+                provedor.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(provedoresService.save(provedor));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

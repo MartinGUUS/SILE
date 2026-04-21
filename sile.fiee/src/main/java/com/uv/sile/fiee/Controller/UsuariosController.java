@@ -63,4 +63,21 @@ public class UsuariosController {
         }
         return ResponseEntity.notFound().build();
     }
+
+    // PATCH http://localhost:8080/usuarios/1/estado
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Usuarios> actualizarEstado(@PathVariable Integer id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Usuarios> usuarioOptional = usuariosService.findById(id);
+        if (usuarioOptional.isPresent()) {
+            Usuarios usuario = usuarioOptional.get();
+            if (updates.containsKey("estado")) {
+                usuario.setEstado(updates.get("estado"));
+            }
+            if (updates.containsKey("fkRol")) {
+                usuario.setFkRol(Integer.parseInt(updates.get("fkRol")));
+            }
+            return ResponseEntity.ok(usuariosService.save(usuario));
+        }
+        return ResponseEntity.notFound().build();
+    }
 }

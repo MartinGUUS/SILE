@@ -59,10 +59,14 @@ public class AuthController {
                                         usuario.getNombre(),
                                         usuario.getApellido(),
                                         usuario.getCorreo(),
-                                        usuario.getIdUsuario());
+                                        usuario.getIdUsuario(),
+                                        usuario.getFkRol());
 
                         return ResponseEntity.ok(response);
 
+                } catch (org.springframework.security.authentication.DisabledException e) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                        .body(Map.of("error", "Tu cuenta está pendiente de aprobación por el administrador (Inactiva)."));
                 } catch (BadCredentialsException e) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("error", "Correo o contraseña incorrectos"));
@@ -101,7 +105,8 @@ public class AuthController {
                                         nuevoUsuario.getNombre(),
                                         nuevoUsuario.getApellido(),
                                         nuevoUsuario.getCorreo(),
-                                        nuevoUsuario.getIdUsuario());
+                                        nuevoUsuario.getIdUsuario(),
+                                        nuevoUsuario.getFkRol());
 
                         return ResponseEntity.status(HttpStatus.CREATED).body(response);
 

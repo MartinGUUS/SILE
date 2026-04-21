@@ -29,9 +29,15 @@ public class CustomUserDetailsService implements UserDetailsService {
             role = "ROLE_ADMIN";
         }
 
+        boolean enabled = "1".equals(usuario.getEstado());
+
         return new User(
                 usuario.getCorreo(),
                 usuario.getContrasena(),
+                enabled, // enabled
+                true,    // accountNonExpired
+                true,    // credentialsNonExpired
+                true,    // accountNonLocked
                 Collections.singletonList(new SimpleGrantedAuthority(role))
         );
     }

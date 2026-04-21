@@ -7,16 +7,18 @@ public class LoginResponse {
     private String apellido;
     private String correo;
     private Integer idUsuario;
+    private Integer fkRol;
 
     public LoginResponse() {
     }
 
-    public LoginResponse(String token, String nombre, String apellido, String correo, Integer idUsuario) {
+    public LoginResponse(String token, String nombre, String apellido, String correo, Integer idUsuario, Integer fkRol) {
         this.token = token;
         this.nombre = nombre;
         this.apellido = apellido;
         this.correo = correo;
         this.idUsuario = idUsuario;
+        this.fkRol = fkRol;
     }
 
     public String getToken() {
@@ -57,5 +59,13 @@ public class LoginResponse {
 
     public void setIdUsuario(Integer idUsuario) {
         this.idUsuario = idUsuario;
+    }
+
+    public Integer getFkRol() {
+        return fkRol;
+    }
+
+    public void setFkRol(Integer fkRol) {
+        this.fkRol = fkRol;
     }
 }

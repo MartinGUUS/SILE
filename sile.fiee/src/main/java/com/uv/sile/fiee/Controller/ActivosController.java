@@ -65,4 +65,17 @@ public class ActivosController {
         }
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Activos> cambiarEstado(@PathVariable String id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Activos> activoOptional = activosService.findById(id);
+        if (activoOptional.isPresent()) {
+            Activos activo = activoOptional.get();
+            if (updates.containsKey("estado")) {
+                activo.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(activosService.save(activo));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

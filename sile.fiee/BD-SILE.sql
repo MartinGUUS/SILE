@@ -165,6 +165,112 @@ create table if not exists asignaciones (
     foreign key (fk_activo) references activos (no_activo),
     foreign key (fk_area) references areas (id_area),
     foreign key (fk_resguardante) references resguardantes (id_resguardante),
-    foreign key (creado_por) references usuarios (id_usuario),
     foreign key (ultimo_actualizado_por) references usuarios (id_usuario)
 );
+
+-- ==========================================
+-- INSERT DE DATOS CATÁLOGO REQUERIDOS (PARA PRODUCTOS/ACTIVOS)
+-- ==========================================
+
+-- 1. Áreas
+INSERT IGNORE INTO
+    areas (id_area, nombre, descripcion)
+VALUES (
+        'A-001',
+        'Laboratorio de Cómputo',
+        'Área principal de sistemas y programación'
+    ),
+    (
+        'A-002',
+        'Taller de Electrónica',
+        'Prácticas y ensamblaje de circuitos'
+    );
+
+-- 2. Presentación
+INSERT IGNORE INTO
+    presentacion (id_presentacion, nombre)
+VALUES ('P-CAJA', 'En caja'),
+    ('P-UNID', 'Unidad suelta'),
+    (
+        'P-KIT',
+        'Paquete / Kit completo'
+    );
+
+-- 3. Líneas
+INSERT IGNORE INTO
+    lineas (id_linea, nombre)
+VALUES (
+        'L-COMP',
+        'Computación y Sistemas'
+    ),
+    (
+        'L-ELEC',
+        'Herramienta y Electrónica'
+    );
+
+-- 4. Marcas
+INSERT IGNORE INTO
+    marcas (id_marca, nombre)
+VALUES ('M-DELL', 'Dell Technologies'),
+    ('M-FLUKE', 'Fluke Networks'),
+    ('M-HP', 'Hewlett-Packard');
+
+-- 5. Proveedores
+INSERT IGNORE INTO
+    provedores (id_provedor, nombre)
+VALUES (
+        'PRV-001',
+        'Soluciones Tecnológicas S.A de C.V'
+    ),
+    (
+        'PRV-002',
+        'Electrónica Global Monterrey'
+    );
+
+-- 7. Los Activos (Productos)
+INSERT IGNORE INTO
+    activos (
+        no_activo,
+        nombre,
+        descripcion,
+        precio,
+        existencias,
+        garantia,
+        n_serie,
+        fk_provedor,
+        fk_marca,
+        fk_linea,
+        fk_presentacion,
+        creado_por,
+        ultimo_actualizado_por
+    )
+VALUES (
+        'ACT-10001',
+        'Computadora Optiplex 7000',
+        'PC i7 16GB RAM 512GB SSD',
+        18500.00,
+        15,
+        '12 Meses',
+        'SN-DELL-88223',
+        'PRV-001',
+        'M-DELL',
+        'L-COMP',
+        'P-CAJA',
+        1,
+        1
+    ),
+    (
+        'ACT-10002',
+        'Multímetro Fluke 87V',
+        'Multímetro digital industrial RMS',
+        8500.00,
+        4,
+        '36 Meses',
+        'SN-FL-9911X',
+        'PRV-002',
+        'M-FLUKE',
+        'L-ELEC',
+        'P-UNID',
+        1,
+        1
+    );

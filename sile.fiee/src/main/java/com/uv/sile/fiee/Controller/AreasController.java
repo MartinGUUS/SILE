@@ -56,4 +56,17 @@ public class AreasController {
         }
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Areas> cambiarEstado(@PathVariable String id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Areas> areaOptional = areasService.findById(id);
+        if (areaOptional.isPresent()) {
+            Areas area = areaOptional.get();
+            if (updates.containsKey("estado")) {
+                area.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(areasService.save(area));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

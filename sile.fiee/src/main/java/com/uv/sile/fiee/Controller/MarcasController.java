@@ -55,4 +55,17 @@ public class MarcasController {
         }
     }
 
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Marcas> cambiarEstado(@PathVariable String id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Marcas> marcaOptional = marcasService.findById(id);
+        if (marcaOptional.isPresent()) {
+            Marcas marca = marcaOptional.get();
+            if (updates.containsKey("estado")) {
+                marca.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(marcasService.save(marca));
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
 }

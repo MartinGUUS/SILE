@@ -1,0 +1,10 @@
+{
+    "/auth": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/usuarios": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/activos": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/marcas": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/provedores": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/lineas": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/presentacion": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/areas": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true }
+}
