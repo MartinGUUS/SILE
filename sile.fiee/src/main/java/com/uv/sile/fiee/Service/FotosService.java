@@ -26,6 +26,10 @@ public class FotosService {
         return fotosRepository.save(fotos);
     }
 
+    public List<Fotos> findByFkActivo(String fkActivo) {
+        return fotosRepository.findByFkActivo(fkActivo);
+    }
+
     public void delete(Integer id) {
         fotosRepository.deleteById(id);
     }

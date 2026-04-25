@@ -15,4 +15,6 @@ public interface PresentacionRepository extends JpaRepository<Presentacion, Stri
     @Query(value = "SELECT * FROM presentacion WHERE nombre LIKE %:fragmento%", nativeQuery = true)
     List<Presentacion> buscarPorNombreNativamente(@Param("fragmento") String fragmento);
 
+    List<Presentacion> findByEstadoNot(String estado);
+    List<Presentacion> findByEstado(String estado);
 }

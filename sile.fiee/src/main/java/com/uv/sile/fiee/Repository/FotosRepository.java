@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface FotosRepository extends JpaRepository<Fotos, Integer> {
 
+    List<Fotos> findByFkActivo(String fkActivo);
+
     // ejemplo de consulta nativa
     @Query(value = "SELECT * FROM fotos WHERE fk_activo LIKE %:fragmento%", nativeQuery = true)
     List<Fotos> buscarPorFkActivoNativamente(@Param("fragmento") String fragmento);

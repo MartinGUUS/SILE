@@ -15,7 +15,11 @@ public class MarcasService {
     private MarcasRepository marcasRepository;
 
     public List<Marcas> findAll() {
-        return marcasRepository.findAll();
+        return marcasRepository.findByEstadoNot("3");
+    }
+
+    public List<Marcas> findByEstado(String estado) {
+        return marcasRepository.findByEstado(estado);
     }
 
     public Optional<Marcas> findById(String id) {

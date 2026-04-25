@@ -18,7 +18,10 @@ public class LineasController {
     private LineasService lineasService;
 
     @GetMapping
-    public List<Lineas> getAllLineas() {
+    public List<Lineas> getAllLineas(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return lineasService.findByEstado(estado);
+        }
         return lineasService.findAll();
     }
 

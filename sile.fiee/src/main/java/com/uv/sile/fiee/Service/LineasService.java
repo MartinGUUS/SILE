@@ -15,7 +15,11 @@ public class LineasService {
     private LineasRepository lineasRepository;
 
     public List<Lineas> findAll() {
-        return lineasRepository.findAll();
+        return lineasRepository.findByEstadoNot("3");
+    }
+
+    public List<Lineas> findByEstado(String estado) {
+        return lineasRepository.findByEstado(estado);
     }
 
     public Optional<Lineas> findById(String id) {

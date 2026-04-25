@@ -15,4 +15,6 @@ public interface LineasRepository extends JpaRepository<Lineas, String> {
     @Query(value = "SELECT * FROM lineas WHERE nombre LIKE %:fragmento%", nativeQuery = true)
     List<Lineas> buscarPorNombreNativamente(@Param("fragmento") String fragmento);
 
+    List<Lineas> findByEstadoNot(String estado);
+    List<Lineas> findByEstado(String estado);
 }

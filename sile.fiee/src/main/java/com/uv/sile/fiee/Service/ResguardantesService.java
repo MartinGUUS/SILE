@@ -15,7 +15,11 @@ public class ResguardantesService {
     private ResguardantesRepository resguardantesRepository;
 
     public List<Resguardantes> findAll() {
-        return resguardantesRepository.findAll();
+        return resguardantesRepository.findByEstadoNot("3");
+    }
+
+    public List<Resguardantes> findByEstado(String estado) {
+        return resguardantesRepository.findByEstado(estado);
     }
 
     public Optional<Resguardantes> findById(Integer id) {

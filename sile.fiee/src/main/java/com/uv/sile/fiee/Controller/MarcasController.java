@@ -18,7 +18,10 @@ public class MarcasController {
     private MarcasService marcasService;
 
     @GetMapping
-    public List<Marcas> getAllMarcas() {
+    public List<Marcas> getAllMarcas(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return marcasService.findByEstado(estado);
+        }
         return marcasService.findAll();
     }
 

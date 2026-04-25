@@ -63,7 +63,7 @@ public class SecurityConfig {
             // Configurar autorización de peticiones
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos (sin autenticación)
-                .requestMatchers("/auth/**", "/error").permitAll()
+                .requestMatchers("/auth/**", "/error", "/fotos/view/**").permitAll()
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )

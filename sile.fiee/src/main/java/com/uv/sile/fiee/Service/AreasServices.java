@@ -15,7 +15,12 @@ public class AreasServices {
     private AreasRepository areasRepository;
 
     public List<Areas> findAll() {
-        return areasRepository.findAll();
+        // Por defecto excluye los borrados lógicamente (estado=3)
+        return areasRepository.findByEstadoNot("3");
+    }
+
+    public List<Areas> findByEstado(String estado) {
+        return areasRepository.findByEstado(estado);
     }
 
     public Optional<Areas> findById(String id) {

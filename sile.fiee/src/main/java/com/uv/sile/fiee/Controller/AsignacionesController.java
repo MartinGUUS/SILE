@@ -59,4 +59,9 @@ public class AsignacionesController {
         }
     }
 
+    @GetMapping("/activo/{id}")
+    public List<Asignaciones> getAsignacionesByActivo(@PathVariable String id) {
+        return asignacionesService.findByFkActivo(id);
+    }
+
 }

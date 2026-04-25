@@ -15,4 +15,6 @@ public interface MarcasRepository extends JpaRepository<Marcas, String> {
     @Query(value = "SELECT * FROM marcas WHERE nombre LIKE %:fragmento%", nativeQuery = true)
     List<Marcas> buscarPorNombreNativamente(@Param("fragmento") String fragmento);
 
+    List<Marcas> findByEstadoNot(String estado);
+    List<Marcas> findByEstado(String estado);
 }

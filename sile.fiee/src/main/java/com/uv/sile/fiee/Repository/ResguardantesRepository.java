@@ -16,4 +16,6 @@ public interface ResguardantesRepository extends JpaRepository<Resguardantes, In
     List<Resguardantes> buscarPorNombreOApellidoNativamente(@Param("fragmento") String fragmento,
             @Param("fragmento2") String fragmento2);
 
+    List<Resguardantes> findByEstadoNot(String estado);
+    List<Resguardantes> findByEstado(String estado);
 }

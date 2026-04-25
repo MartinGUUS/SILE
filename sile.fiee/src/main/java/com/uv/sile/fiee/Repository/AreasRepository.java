@@ -15,4 +15,6 @@ public interface AreasRepository extends JpaRepository<Areas, String> {
     @Query(value = "SELECT * FROM areas WHERE nombre LIKE %:fragmento%", nativeQuery = true)
     List<Areas> buscarPorNombreNativamente(@Param("fragmento") String fragmento);
 
+    List<Areas> findByEstadoNot(String estado);
+    List<Areas> findByEstado(String estado);
 }

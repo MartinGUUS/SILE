@@ -15,7 +15,11 @@ public class ProvedoresService {
     private ProvedoresRepository provedoresRepository;
 
     public List<Provedores> findAll() {
-        return provedoresRepository.findAll();
+        return provedoresRepository.findByEstadoNot("3");
+    }
+
+    public List<Provedores> findByEstado(String estado) {
+        return provedoresRepository.findByEstado(estado);
     }
 
     public Optional<Provedores> findById(String id) {

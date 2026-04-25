@@ -16,4 +16,6 @@ public interface ProvedoresRepository extends JpaRepository<Provedores, String> 
     List<Provedores> buscarPorNombreORfcNativamente(@Param("fragmento") String fragmento,
             @Param("fragmento2") String fragmento2);
 
+    List<Provedores> findByEstadoNot(String estado);
+    List<Provedores> findByEstado(String estado);
 }

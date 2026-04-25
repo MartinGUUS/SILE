@@ -18,7 +18,11 @@ public class ActivosController {
     private ActivosServices activosService;
 
     @GetMapping
-    public List<Activos> getAllActivos() {
+    public List<Activos> getAllActivos(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return activosService.findByEstado(estado);
+        }
+        // Por defecto (sin parámetro o estado=3 no permitido), excluye borrado lógico
         return activosService.findAll();
     }
 

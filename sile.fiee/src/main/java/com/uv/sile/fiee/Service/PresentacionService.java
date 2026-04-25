@@ -15,7 +15,11 @@ public class PresentacionService {
     private PresentacionRepository presentacionRepository;
 
     public List<Presentacion> findAll() {
-        return presentacionRepository.findAll();
+        return presentacionRepository.findByEstadoNot("3");
+    }
+
+    public List<Presentacion> findByEstado(String estado) {
+        return presentacionRepository.findByEstado(estado);
     }
 
     public Optional<Presentacion> findById(String id) {

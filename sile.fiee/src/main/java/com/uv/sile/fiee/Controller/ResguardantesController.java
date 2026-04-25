@@ -18,7 +18,10 @@ public class ResguardantesController {
     private ResguardantesService resguardantesService;
 
     @GetMapping
-    public List<Resguardantes> getAllResguardantes() {
+    public List<Resguardantes> getAllResguardantes(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return resguardantesService.findByEstado(estado);
+        }
         return resguardantesService.findAll();
     }
 
@@ -52,6 +55,20 @@ public class ResguardantesController {
         if (resguardantesService.findById(id).isPresent()) {
             resguardantesService.delete(id);
             return ResponseEntity.noContent().build();
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    @PatchMapping("/{id}/estado")
+    public ResponseEntity<Resguardantes> cambiarEstado(@PathVariable Integer id, @RequestBody java.util.Map<String, String> updates) {
+        Optional<Resguardantes> resgOptional = resguardantesService.findById(id);
+        if (resgOptional.isPresent()) {
+            Resguardantes resg = resgOptional.get();
+            if (updates.containsKey("estado")) {
+                resg.setEstado(updates.get("estado"));
+            }
+            return ResponseEntity.ok(resguardantesService.save(resg));
         } else {
             return ResponseEntity.notFound().build();
         }

@@ -16,4 +16,10 @@ public interface ActivosRepository extends JpaRepository<Activos, String> {
     List<Activos> buscarPorNombreODescripcionNativamente(@Param("fragmento") String fragmento,
             @Param("fragmento2") String fragmento2);
 
+    // Retorna activos cuyo estado NO sea el indicado (excluye estado 3 = borrado lógico)
+    List<Activos> findByEstadoNot(String estado);
+
+    // Retorna activos por estado exacto
+    List<Activos> findByEstado(String estado);
+
 }

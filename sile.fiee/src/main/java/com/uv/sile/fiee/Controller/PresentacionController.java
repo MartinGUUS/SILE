@@ -18,7 +18,10 @@ public class PresentacionController {
     private PresentacionService presentacionService;
 
     @GetMapping
-    public List<Presentacion> getAllPresentaciones() {
+    public List<Presentacion> getAllPresentaciones(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return presentacionService.findByEstado(estado);
+        }
         return presentacionService.findAll();
     }
 

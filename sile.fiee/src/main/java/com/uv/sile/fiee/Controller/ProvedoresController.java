@@ -18,7 +18,10 @@ public class ProvedoresController {
     private ProvedoresService provedoresService;
 
     @GetMapping
-    public List<Provedores> getAllProvedores() {
+    public List<Provedores> getAllProvedores(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return provedoresService.findByEstado(estado);
+        }
         return provedoresService.findAll();
     }
 

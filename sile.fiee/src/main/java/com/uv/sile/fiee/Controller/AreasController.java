@@ -18,7 +18,10 @@ public class AreasController {
     private AreasServices areasService;
 
     @GetMapping
-    public List<Areas> getAllAreas() {
+    public List<Areas> getAllAreas(@RequestParam(required = false) String estado) {
+        if (estado != null && !estado.equals("3")) {
+            return areasService.findByEstado(estado);
+        }
         return areasService.findAll();
     }
 

@@ -11,6 +11,8 @@ import java.util.List;
 @Repository
 public interface AsignacionesRepository extends JpaRepository<Asignaciones, Integer> {
 
+    List<Asignaciones> findByFkActivo(String fkActivo);
+
     // ejemplo de consulta nativa
     @Query(value = "SELECT * FROM asignaciones WHERE fk_activo LIKE %:fragmento%", nativeQuery = true)
     List<Asignaciones> buscarPorFkActivoNativamente(@Param("fragmento") String fragmento);

@@ -22,6 +22,10 @@ public class AsignacionesService {
         return asignacionesRepository.findById(id);
     }
 
+    public List<Asignaciones> findByFkActivo(String fkActivo) {
+        return asignacionesRepository.findByFkActivo(fkActivo);
+    }
+
     public Asignaciones save(Asignaciones asignaciones) {
         return asignacionesRepository.save(asignaciones);
     }
