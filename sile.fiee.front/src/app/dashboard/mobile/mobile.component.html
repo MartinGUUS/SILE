@@ -1,0 +1,163 @@
+    <div class="mobile-container">
+      <header class="mobile-header">
+        <h2>Panel de Escaneo</h2>
+        <button class="logout-btn" (click)="logout()">Salir</button>
+      </header>
+
+      <main class="mobile-main">
+        <div class="scanner-card" *ngIf="!isScanning()">
+          <div class="scanner-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 7V4h3"></path>
+              <path d="M4 17v3h3"></path>
+              <path d="M20 7V4h-3"></path>
+              <path d="M20 17v3h-3"></path>
+              <rect x="5" y="11" width="1" height="2"></rect>
+              <rect x="8" y="9" width="2" height="6"></rect>
+              <rect x="12" y="10" width="1" height="4"></rect>
+              <rect x="15" y="9" width="1" height="6"></rect>
+              <rect x="18" y="11" width="1" height="2"></rect>
+            </svg>
+          </div>
+          <h3>Escáner de Activos</h3>
+          <p>Apunta la cámara al código del dispositivo.</p>
+          <button class="scan-btn" (click)="startScanning()">Activar Cámara</button>
+        </div>
+
+        <div class="action-card" *ngIf="!isScanning() && !showCreateForm">
+          <div class="scanner-icon" style="background: #e0f2fe; color: #0284c7;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+          </div>
+          <h3>Nuevo Producto</h3>
+          <p>Registra un activo manualmente y sube fotos.</p>
+          <button class="scan-btn secondary" (click)="openCreateForm()">Agregar nuevo producto</button>
+        </div>
+
+        <div class="scanner-active-container" [style.display]="isScanning() ? 'block' : 'none'">
+          <video id="video-preview" playsinline style="width: 100%; object-fit: cover; border-radius: 8px; background: #000; min-height: 250px;"></video>
+          <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem; text-align: center;">
+            {{ debugMessage() }}
+          </div>
+          
+          <div class="scan-result" *ngIf="scanResult()">
+            <h4>Resultado:</h4>
+            <p class="scanned-text">{{ scanResult() }}</p>
+            <button class="scan-btn secondary" (click)="startScanning()" style="margin-top: 1rem">Escanear otro</button>
+          </div>
+
+          <button *ngIf="isScanning() && !scanResult()" class="logout-btn" style="width: 100%; text-align: center; margin-top: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;" (click)="stopScanning()">Cancelar</button>
+        </div>
+
+        <!-- Formulario Crear Activo -->
+        <div class="mobile-form-container" *ngIf="showCreateForm">
+          <div class="form-header">
+            <h3>Registrar Activo</h3>
+            <button class="close-btn" (click)="closeCreateForm()">✕</button>
+          </div>
+          
+          <div class="form-group">
+            <label>No. Activo</label>
+            <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003">
+          </div>
+          <div class="form-group">
+            <label>Nombre</label>
+            <input type="text" [(ngModel)]="newActivo.nombre">
+          </div>
+          <div class="form-group">
+            <label>Descripción</label>
+            <input type="text" [(ngModel)]="newActivo.descripcion">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Precio</label>
+              <input type="number" [(ngModel)]="newActivo.precio">
+            </div>
+            <div class="form-group">
+              <label>Existencias</label>
+              <input type="number" [(ngModel)]="newActivo.existencias">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Garantía</label>
+            <input type="text" [(ngModel)]="newActivo.garantia">
+          </div>
+          <div class="form-group">
+            <label>No. Serie</label>
+            <input type="text" [(ngModel)]="newActivo.nSerie">
+          </div>
+          
+          <!-- Selects de foráneas -->
+          <div class="form-group">
+            <label>Marca</label>
+            <select [(ngModel)]="newActivo.fkMarca">
+              <option *ngFor="let m of listMarcas" [value]="m.idMarca">{{ m.nombre }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Proveedor</label>
+            <select [(ngModel)]="newActivo.fkProvedor">
+              <option *ngFor="let p of listProveedores" [value]="p.idProvedor">{{ p.nombre }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Línea</label>
+            <select [(ngModel)]="newActivo.fkLinea">
+              <option *ngFor="let l of listLineas" [value]="l.idLinea">{{ l.nombre }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Presentación</label>
+            <select [(ngModel)]="newActivo.fkPresentacion">
+              <option *ngFor="let pr of listPresentacion" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
+            </select>
+          </div>
+
+          <!-- Asignación -->
+          <div class="form-group full-width" style="border-top: 1px dashed var(--border-color); padding-top: 1rem; margin-top: 0.5rem;">
+            <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--gray-800);">Asignación</h3>
+          </div>
+          <div class="form-group">
+            <label>Área</label>
+            <select [(ngModel)]="newActivo.fkArea">
+              <option *ngFor="let a of listAreas" [value]="a.idArea">{{ a.nombre }}</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Resguardante</label>
+            <select [(ngModel)]="newActivo.fkResguardante">
+              <option *ngFor="let r of listResguardantes" [value]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
+            </select>
+          </div>
+          <div class="form-group full-width" style="border-top: 1px dashed var(--border-color); padding-top: 1rem; margin-top: 0.5rem;"></div>
+          <div class="form-group photo-section">
+            <label>Fotografía del Activo</label>
+            <div class="photo-buttons">
+              <label class="photo-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                Tomar Foto
+                <input type="file" accept="image/*" capture="environment" (change)="onFileSelected($event)" style="display: none;">
+              </label>
+              <label class="photo-btn outline">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Importar
+                <input type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
+              </label>
+            </div>
+            <div *ngIf="selectedFile" class="file-status">
+              ✓ Archivo: {{ selectedFile.name }}
+            </div>
+          </div>
+
+          <button class="scan-btn" (click)="saveNuevoActivo()" [disabled]="isSaving" style="margin-top: 1.5rem;">
+            {{ isSaving ? 'Guardando...' : 'Guardar Producto' }}
+          </button>
+        </div>
+      </main>
+
+      <nav class="mobile-nav">
+        <a href="javascript:void(0)" class="nav-item active">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+          <span>Inicio</span>
+        </a>
+      </nav>
+    </div>

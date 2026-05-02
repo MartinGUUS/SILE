@@ -1,0 +1,412 @@
+# FRONTEND REFACTORING PLAN (Steps 1-3)
+
+================================================================================
+STEP 1: CREATE TYPESCRIPT INTERFACES (Replace `any` with proper types)
+================================================================================
+
+Goal: Create a models folder with proper interfaces for all entities, then
+update components to use them instead of `any`.
+
+--------------------------------------------------------------------------------
+1.1 - Create the models folder:
+--------------------------------------------------------------------------------
+
+Location: sile.fiee.front/src/app/models/
+
+--------------------------------------------------------------------------------
+1.2 - Create these interface files:
+--------------------------------------------------------------------------------
+
+FILE: src/app/models/activo.model.ts
+----------------------------------------
+export interface Activo {
+  idActivo?: string;
+  nombre?: string;
+  descripcion?: string;
+  precio?: number;
+  existencias?: number;
+  garantia?: string;
+  nSerie?: string;
+  fkMarca?: string;
+  fkProvedor?: string;
+  fkLinea?: string;
+  fkPresentacion?: string;
+  fkArea?: string;
+  fkResguardante?: string;
+  estado?: string;
+  creadoPor?: number;
+  ultimoActualizadoPor?: number;
+}
+
+FILE: src/app/models/usuario.model.ts
+----------------------------------------
+export interface Usuario {
+  idUsuario?: number;
+  nombre?: string;
+  apellido?: string;
+  correo?: string;
+  contrasena?: string;
+  estado?: string;
+  fkRol?: number;
+}
+
+FILE: src/app/models/marca.model.ts
+----------------------------------------
+export interface Marca {
+  idMarca?: string;
+  nombre?: string;
+  estado?: string;
+}
+
+FILE: src/app/models/proveedor.model.ts
+----------------------------------------
+export interface Proveedor {
+  idProvedor?: string;
+  nombre?: string;
+  estado?: string;
+}
+
+FILE: src/app/models/linea.model.ts
+----------------------------------------
+export interface Linea {
+  idLinea?: string;
+  nombre?: string;
+  estado?: string;
+}
+
+FILE: src/app/models/presentacion.model.ts
+----------------------------------------
+export interface Presentacion {
+  idPresentacion?: string;
+  nombre?: string;
+  estado?: string;
+}
+
+FILE: src/app/models/area.model.ts
+----------------------------------------
+export interface Area {
+  idArea?: string;
+  nombre?: string;
+  descripcion?: string;
+  estado?: string;
+}
+
+FILE: src/app/models/resguardante.model.ts
+----------------------------------------
+export interface Resguardante {
+  idResguardante?: string;
+  nombres?: string;
+  apellidos?: string;
+  estado?: string;
+}
+
+FILE: src/app/models/foto.model.ts
+----------------------------------------
+export interface Foto {
+  idFoto?: number;
+  fkActivo?: string;
+  foto?: string;
+  creadoPor?: number;
+  ultimoActualizadoPor?: number;
+}
+
+FILE: src/app/models/asignacion.model.ts
+----------------------------------------
+export interface Asignacion {
+  idAsignacion?: number;
+  fkActivo?: string;
+  fkArea?: string;
+  fkResguardante?: string;
+  estado?: string;
+  creadoPor?: number;
+  ultimoActualizadoPor?: number;
+}
+
+--------------------------------------------------------------------------------
+1.3 - Update desktop.component.ts:
+--------------------------------------------------------------------------------
+
+Add these imports at the TOP of the file (after existing imports):
+
+import { Activo } from '../../models/activo.model';
+import { Usuario } from '../../models/usuario.model';
+import { Marca } from '../../models/marca.model';
+import { Proveedor } from '../../models/proveedor.model';
+import { Linea } from '../../models/linea.model';
+import { Presentacion } from '../../models/presentacion.model';
+import { Area } from '../../models/area.model';
+import { Resguardante } from '../../models/resguardante.model';
+import { Foto } from '../../models/foto.model';
+import { Asignacion } from '../../models/asignacion.model';
+
+Then change these properties throughout the component:
+
+BEFORE                          | AFTER
+--------------------------------|--------------------------------------
+dataUsuarios = signal<any[]>([]); | dataUsuarios = signal<Usuario[]>([]);
+dataActivos = signal<any[]>([]);  | dataActivos = signal<Activo[]>([]);
+dataCatalogo = signal<any[]>([]); | dataCatalogo = signal<(Marca | Proveedor | Linea | Presentacion | Area | Resguardante)[]>([]);
+
+editForm: any = {};              | editForm: Partial<Activo | Usuario> = {};
+newActivo: any = { estado: 1 };   | newActivo: Partial<Activo> = { estado: '1' };
+
+listMarcas = signal<any[]>([]);  | listMarcas = signal<Marca[]>([]);
+listProveedores = signal<any[]>  | listProveedores = signal<Proveedor[]>([]);
+listLineas = signal<any[]>([]);  | listLineas = signal<Linea[]>([]);
+listPresentacion = signal<any[]> | listPresentacion = signal<Presentacion[]>([]);
+listAreas = signal<any[]>([]);   | listAreas = signal<Area[]>([]);
+listResguardantes = signal<any[]> | listResguardantes = signal<Resguardante[]>([]);
+
+selectedActivo: any = null;      | selectedActivo: Activo | null = null;
+fotosActivo = signal<any[]>([]); | fotosActivo = signal<Foto[]>([]);
+assignmentActivo = signal<any>   | assignmentActivo = signal<Asignacion | null>;
+editActivoForm: any = {};        | editActivoForm: Partial<Activo> = {};
+
+newCatalogo: any = {};            | newCatalogo: Partial<Marca | Proveedor | Linea | Presentacion | Area | Resguardante> = {};
+
+Repeat for any other "any" types found in the component.
+
+================================================================================
+STEP 2: EXTRACT HTML TEMPLATE TO SEPARATE FILE
+================================================================================
+
+Goal: Move the inline template string from the .ts file to a separate .html file.
+
+--------------------------------------------------------------------------------
+2.1 - CREATE A BACKUP (IMPORTANT!)
+--------------------------------------------------------------------------------
+
+Option A - Git (if initialized):
+  git add .
+  git commit -m "Backup before refactoring"
+
+Option B - Manual copy:
+  Copy the entire content of desktop.component.ts to a safe location
+
+--------------------------------------------------------------------------------
+2.2 - Create new HTML file:
+--------------------------------------------------------------------------------
+
+Location: sile.fiee.front/src/app/dashboard/desktop/desktop.component.html
+
+NOTE: Copy this file path exactly, it does not exist yet.
+
+--------------------------------------------------------------------------------
+2.3 - Copy the template content:
+--------------------------------------------------------------------------------
+
+1. Open: sile.fiee.front/src/app/dashboard/desktop/desktop.component.ts
+2. Find the @Component decorator (around line 14)
+3. Find where "template: `" starts (line 18)
+4. Find where the template ends - it ends with "`" (around line 626)
+5. Copy EVERYTHING between the backticks (NOT the backticks themselves)
+6. Paste it into: desktop.component.html
+
+The content to copy starts at:
+    <div class="desktop-layout">
+And ends at:
+    </div>
+  `,
+
+IMPORTANT: Do NOT include the backticks (`) in the copy. Just the content inside.
+
+--------------------------------------------------------------------------------
+2.4 - Update the component decorator in desktop.component.ts:
+--------------------------------------------------------------------------------
+
+Find this section in the file:
+
+BEFORE (lines 14-18):
+-----------
+@Component({
+  selector: 'app-desktop-dashboard',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+
+AFTER:
+-------
+@Component({
+  selector: 'app-desktop-dashboard',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './desktop.component.html',
+
+--------------------------------------------------------------------------------
+2.5 - Delete the old template content:
+--------------------------------------------------------------------------------
+
+1. In desktop.component.ts, delete lines 18-626
+2. These are the lines that contain the template string
+3. Keep everything else in the file (class, methods, imports, etc.)
+
+The file should now have:
+- Imports (lines 1-10)
+- type TabType definition (line 12)
+- @Component with templateUrl (lines 14-17)
+- class DesktopDashboardComponent (line 714+)
+
+--------------------------------------------------------------------------------
+2.6 - Repeat for mobile component:
+--------------------------------------------------------------------------------
+
+1. Create: sile.fiee.front/src/app/dashboard/mobile/mobile.component.html
+2. Copy template from mobile.component.ts (lines 15-179)
+3. Update @Component decorator in mobile.component.ts to use:
+   templateUrl: './mobile.component.html',
+4. Delete old template string from mobile.component.ts
+
+================================================================================
+STEP 3: EXTRACT STYLES TO SEPARATE CSS FILE
+================================================================================
+
+Goal: Move inline styles from the .ts file to a separate .css file.
+
+--------------------------------------------------------------------------------
+3.1 - Create new CSS file:
+--------------------------------------------------------------------------------
+
+Location: sile.fiee.front/src/app/dashboard/desktop/desktop.component.css
+
+--------------------------------------------------------------------------------
+3.2 - Copy the styles content:
+--------------------------------------------------------------------------------
+
+1. Open: sile.fiee.front/src/app/dashboard/desktop/desktop.component.ts
+2. Find "styles: `" section (starts around line 627 after template changes)
+3. Find where styles end - ends with "`" (around line 712)
+4. Copy EVERYTHING between the backticks (NOT the backticks themselves)
+5. Paste it into: desktop.component.css
+
+IMPORTANT: Remove all leading spaces from each line in the CSS file.
+For example, change:
+    .desktop-layout { display: flex; ... }
+To:
+.desktop-layout { display: flex; ... }
+
+(Remove the extra indentation spaces at the start of each line)
+
+--------------------------------------------------------------------------------
+3.3 - Update the component decorator:
+--------------------------------------------------------------------------------
+
+In desktop.component.ts, update the @Component to use styleUrl:
+
+BEFORE:
+-------
+@Component({
+  selector: 'app-desktop-dashboard',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './desktop.component.html',
+  // styles were here as a string
+})
+
+AFTER:
+-------
+@Component({
+  selector: 'app-desktop-dashboard',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './desktop.component.html',
+  styleUrl: './desktop.component.css'
+})
+
+NOTE: If you have existing styles in an array, use:
+  styleUrl: ['./desktop.component.css']
+
+--------------------------------------------------------------------------------
+3.4 - Delete the old styles section:
+--------------------------------------------------------------------------------
+
+In desktop.component.ts, delete the entire "styles: `...`" section that you copied to the .css file.
+
+--------------------------------------------------------------------------------
+3.5 - Repeat for mobile component:
+--------------------------------------------------------------------------------
+
+1. Create: sile.fiee.front/src/app/dashboard/mobile/mobile.component.css
+2. Copy styles from mobile.component.ts (the "styles: `" section, lines 180-307)
+3. Update @Component decorator in mobile.component.ts:
+   styleUrl: './mobile.component.css'
+4. Remove the "styles: `...`" string from mobile.component.ts
+
+================================================================================
+VERIFICATION CHECKLIST (After each step)
+================================================================================
+
+After completing STEP 1:
+-----------------------
+[ ] Run: ng build  OR  npm run build
+[ ] Test login -> dashboard -> create activo -> edit activo -> delete activo
+[ ] Test all tabs: activos, usuarios, marcas, proveedores, areas, lineas, presentacion, salvaguardantes
+
+After completing STEP 2:
+-----------------------
+[ ] Run: ng serve
+[ ] Verify the dashboard looks EXACTLY the same as before
+[ ] Test creating a new activo
+[ ] Test editing an activo
+[ ] Test all buttons work
+[ ] Test all tabs navigation
+
+After completing STEP 3:
+-----------------------
+[ ] Run the app: ng serve
+[ ] Verify ALL styles applied correctly:
+    - Sidebar
+    - Tables
+    - Modals
+    - Buttons
+    - Forms
+[ ] Test responsive behavior
+
+================================================================================
+IF SOMETHING BREAKS - ROLLBACK PROCEDURE
+================================================================================
+
+Option 1 - Git (Recommended):
+-----------------------------
+git checkout -- .
+
+This will restore ALL files to the last committed state.
+
+Option 2 - Manual Undo:
+-----------------------
+FOR STEP 1:
+- Delete the folder: sile.fiee.front/src/app/models/
+- All types will revert to 'any'
+
+FOR STEP 2:
+- Delete: sile.fiee.front/src/app/dashboard/desktop/desktop.component.html
+- In desktop.component.ts, restore the template string:
+  Add back:
+    template: `
+    (paste the original template content here)
+    `,
+
+FOR STEP 3:
+- Delete: sile.fiee.front/src/app/dashboard/desktop/desktop.component.css
+- In desktop.component.ts, restore the styles string:
+  Add back:
+    styles: `
+    (paste the original styles content here)
+    `,
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+- This plan keeps 100% functionality intact
+- We are only moving code to separate files and adding type definitions
+- NO business logic changes
+- NO API changes
+- NO database changes
+
+- The file paths mentioned are relative to the project root
+- Adjust paths based on your actual folder structure
+
+- After each step, test thoroughly before proceeding to the next step
+- If any step fails, rollback before trying again
+
+================================================================================
