@@ -19,8 +19,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Autowired
@@ -64,6 +67,11 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Endpoints públicos (sin autenticación)
                 .requestMatchers("/auth/**", "/error", "/fotos/view/**").permitAll()
+                // Cambios / Aprobaciones
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/cambios").hasAnyRole("ADMIN", "EDITOR")
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/cambios/pendientes", "/cambios/pendientes/**", "/cambios/procesados").hasRole("ADMIN")
+                .requestMatchers(org.springframework.http.HttpMethod.PUT, "/cambios/*/aprobar", "/cambios/*/rechazar").hasRole("ADMIN")
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/cambios/mis-solicitudes").hasAnyRole("EDITOR", "ADMIN")
                 // Todo lo demás requiere autenticación
                 .anyRequest().authenticated()
             )

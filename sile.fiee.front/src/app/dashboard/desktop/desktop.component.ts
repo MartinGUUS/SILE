@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnInit, HostListener, ViewChild, ViewChildren, ElementRef, QueryList } from '@angular/core';
+import { Component, inject, signal, OnInit, OnDestroy, HostListener, ViewChild, ViewChildren, ElementRef, QueryList } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +8,8 @@ import { AuthService } from '../../services/auth.service';
 import { UsuariosService } from '../../services/usuarios.service';
 import { CatalogoService } from '../../services/catalogo.service';
 import { UploadService } from '../../services/upload.service';
-
+import { CambiosService } from '../../services/cambios.service';
+import { CambioPendiente } from '../../models/cambio-pendiente.model';
 import { Activo } from '../../models/activo.model';
 import { Usuario } from '../../models/usuario.model';
 import { Marca } from '../../models/marca.model';
@@ -20,7 +21,7 @@ import { Resguardante } from '../../models/resguardante.model';
 import { Foto } from '../../models/foto.model';
 import { Asignacion } from '../../models/asignacion.model';
 
-type TabType = 'activos' | 'usuarios' | 'areas' | 'presentacion' | 'lineas' | 'marcas' | 'provedores' | 'resguardantes';
+type TabType = 'activos' | 'usuarios' | 'areas' | 'presentacion' | 'lineas' | 'marcas' | 'provedores' | 'resguardantes' | 'cambios' | 'mis-solicitudes';
 
 @Component({
   selector: 'app-desktop-dashboard',
@@ -35,7 +36,7 @@ export class DesktopDashboardComponent implements OnInit {
   private catalogoService = inject(CatalogoService);
   private uploadService = inject(UploadService);
   private router = inject(Router);
-
+  private cambiosService = inject(CambiosService);
   activeTab = signal<TabType>('activos');
 
   // Data local
@@ -49,6 +50,24 @@ export class DesktopDashboardComponent implements OnInit {
 
   miId: number | null = null;
   miRol: number | null = null;
+  cantidadPendientes: number = 0;
+  cargandoCambios = false;
+  cargandoSolicitudes = false;
+  pendientesInterval: any;
+
+  // Datos de cambios pendientes / solicitudes
+  dataCambios = signal<CambioPendiente[]>([]);
+  dataProcesados = signal<CambioPendiente[]>([]);
+  dataSolicitudes = signal<CambioPendiente[]>([]);
+  filtroCambios = 'pendientes';
+  cambioSeleccionado: CambioPendiente | null = null;
+  datosJsonParseado: any = null;
+  comentarioRechazo = '';
+  mostrandoTextarea = false;
+  mensajeCambios = '';
+  mensajeCambiosError = false;
+  fotosActualesCambio = signal<any[]>([]);
+  activoOriginal = signal<any>(null);
 
   @ViewChild('idActivoInput') idActivoInput!: ElementRef;
   @ViewChildren('editInput') editInputs!: QueryList<ElementRef>;
@@ -88,6 +107,7 @@ export class DesktopDashboardComponent implements OnInit {
   showModalDetalle = false;
   selectedActivo: Activo | null = null;
   fotosActivo = signal<Foto[]>([]);
+  fotosAEliminar: number[] = [];
 
   // Modal Vista Previa Imagen
   showModalImagePreview = false;
@@ -100,7 +120,43 @@ export class DesktopDashboardComponent implements OnInit {
     
     if (this.miRol === 1) {
       this.loadCatalogosParaActivos().subscribe(data => this.updateCatalogLists(data));
+      this.cargarContadorPendientes();
+      this.pendientesInterval = setInterval(() => {
+        this.cargarContadorPendientes();
+      }, 60000);
+    } else if (this.miRol === 2) {
+      this.loadCatalogosParaActivos().subscribe(data => this.updateCatalogLists(data));
     }
+  }
+
+  ngOnDestroy() {
+    if (this.pendientesInterval) {
+      clearInterval(this.pendientesInterval);
+    }
+  }
+
+  cargarContadorPendientes(): void {
+    this.cambiosService.contarPendientes().subscribe({
+      next: (count) => this.cantidadPendientes = count,
+      error: () => {} 
+    });
+  }
+
+  notifMensaje = '';
+  notifError = false;
+  notifTimeout: any;
+
+  mostrarNotificacion(mensaje: string, esError: boolean = false): void {
+    if (this.notifTimeout) clearTimeout(this.notifTimeout);
+    this.notifMensaje = mensaje;
+    this.notifError = esError;
+    this.notifTimeout = setTimeout(() => { this.notifMensaje = ''; this.notifTimeout = null; }, 5000);
+  }
+
+  cerrarNotificacion(): void {
+    if (this.notifTimeout) clearTimeout(this.notifTimeout);
+    this.notifMensaje = '';
+    this.notifTimeout = null;
   }
 
   @HostListener('window:keydown.escape')
@@ -113,6 +169,7 @@ export class DesktopDashboardComponent implements OnInit {
       this.closeCreateCatalogo();
       this.closeDetalle();
       this.closeEditActivo();
+      this.cerrarModalCambio();
     }
   }
 
@@ -144,7 +201,6 @@ export class DesktopDashboardComponent implements OnInit {
 
   setTab(tab: TabType) {
     this.cancelEdit();
-    // Limpiar señales para evitar ver datos viejos de otras pestañas mientras carga la nueva
     this.dataUsuarios.set([]);
     this.dataActivos.set([]);
     this.dataCatalogo.set([]);
@@ -188,7 +244,34 @@ export class DesktopDashboardComponent implements OnInit {
           console.error(`[CATALOGO] Error cargando ${tab}:`, err);
         }
       });
+    } else if (tab === 'cambios') {
+      this.cargarCambiosSegunFiltro();
+    } else if (tab === 'mis-solicitudes') {
+      this.cargandoSolicitudes = true;
+      this.cambiosService.listarMisSolicitudes().subscribe({
+        next: d => { this.dataSolicitudes.set(d); this.cargandoSolicitudes = false; },
+        error: (err) => { console.error(err); this.cargandoSolicitudes = false; }
+      });
     }
+  }
+
+  cargarCambiosSegunFiltro() {
+    this.cargandoCambios = true;
+    if (this.filtroCambios === 'procesados') {
+      this.cambiosService.listarProcesados().subscribe({
+        next: d => { this.dataProcesados.set(d); this.cargandoCambios = false; },
+        error: (err) => { console.error(err); this.cargandoCambios = false; }
+      });
+    } else {
+      this.cambiosService.listarPendientes().subscribe({
+        next: d => { this.dataCambios.set(d); this.cargandoCambios = false; },
+        error: (err) => { console.error(err); this.cargandoCambios = false; }
+      });
+    }
+  }
+
+  onFiltroCambiosChange() {
+    this.cargarCambiosSegunFiltro();
   }
 
   onFiltroCatalogoChange() {
@@ -208,6 +291,27 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   eliminarRegistro(endpoint: string, id: string) {
+    if (endpoint === 'activos' && this.miRol === 2) {
+      if (!confirm('¿Solicitar eliminación de este activo?')) return;
+      
+      const activoAEliminar = this.dataActivos().find(a => a.idActivo === id);
+      const cambio: CambioPendiente = {
+        tipoCambio: 'ELIMINAR',
+        entidad: 'activos',
+        idEntidad: id,
+        datosJson: JSON.stringify(activoAEliminar || { idActivo: id })
+      };
+      
+      this.cambiosService.enviarCambio(cambio).subscribe({
+        next: () => {
+          this.mostrarNotificacion('Cambio enviado a revisión. Un administrador lo evaluará.');
+          this.loadDataForTab();
+        },
+        error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+      });
+      return;
+    }
+
     if (!confirm('¿Eliminar este registro? Esta acción es permanente (borrado lógico).')) return;
     this.cambiarEstadoGenerico(endpoint, id, '3');
   }
@@ -391,7 +495,7 @@ export class DesktopDashboardComponent implements OnInit {
 
     // Cargar fotos del activo
     this.catalogoService.getAll(`fotos/activo/${item.idActivo}`).subscribe({
-      next: (fotos) => { this.fotosActivo.set(fotos); },
+      next: (fotos) => { this.fotosActivo.set(fotos.filter(f => !this.fotosAEliminar.includes(f.idFoto!))); },
       error: (err) => console.error('[DEBUG] Error al cargar fotos:', err)
     });
 
@@ -415,14 +519,36 @@ export class DesktopDashboardComponent implements OnInit {
     this.loadCatalogosParaActivos().subscribe(data => this.updateCatalogLists(data));
   }
 
-  getResguardanteName(id: number | string): string {
-    const r = this.listResguardantes().find(res => res.idResguardante == id);
+  getAreaName(id: string | undefined): string {
+    const a = this.listAreas().find(area => area.idArea === id);
+    return a?.nombre ? a.nombre : (id ? `ID: ${id}` : 'N/A');
+  }
+
+  getResguardanteName(id: any): string {
+    if (!id) return 'N/A';
+    const sId = String(id);
+    const r = this.listResguardantes().find(res => String(res.idResguardante) === sId);
     return r ? `${r.nombres} ${r.apellidos}` : `ID: ${id}`;
   }
 
-  getAreaName(id: string | undefined): string {
-    const a = this.listAreas().find(area => area.idArea === id);
-    return a?.nombre ? a.nombre : `ID: ${id}`;
+  getMarcaName(id: string | undefined): string {
+    const m = this.listMarcas().find(marca => marca.idMarca === id);
+    return m?.nombre ? m.nombre : (id || 'N/A');
+  }
+
+  getProveedorName(id: string | undefined): string {
+    const p = this.listProveedores().find(prov => prov.idProvedor === id);
+    return p?.nombre ? p.nombre : (id || 'N/A');
+  }
+
+  getLineaName(id: string | undefined): string {
+    const l = this.listLineas().find(linea => linea.idLinea === id);
+    return l?.nombre ? l.nombre : (id || 'N/A');
+  }
+
+  getPresentacionName(id: string | undefined): string {
+    const pr = this.listPresentacion().find(pres => pres.idPresentacion === id);
+    return pr?.nombre ? pr.nombre : (id || 'N/A');
   }
 
   closeDetalle() {
@@ -443,7 +569,11 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   deleteFoto(idFoto: number) {
-    // Eliminación inmediata sin confirmación
+    if (this.miRol === 2) {
+      this.fotosActivo.update(fotos => fotos.filter(f => f.idFoto !== idFoto));
+      this.fotosAEliminar.push(idFoto);
+      return;
+    }
     this.catalogoService.delete('fotos', String(idFoto)).subscribe({
       next: () => {
         this.fotosActivo.update(fotos => fotos.filter(f => f.idFoto !== idFoto));
@@ -456,44 +586,73 @@ export class DesktopDashboardComponent implements OnInit {
   openEditActivo(item: any) {
     console.log('[DEBUG] Abriendo edición para:', item.idActivo);
     this.editActivoForm = { ...item };
+    this.editActivoForm.fkArea = '';
+    this.editActivoForm.fkResguardante = null;
     this.selectedFiles = [];
-    this.fotosActivo.set([]); // Cargar fotos actuales para el modal de edición
+    this.fotosActivo.set([]);
     this.assignmentActivo.set(null);
     this.showModalEditActivo = true;
 
-    this.showModalEditActivo = true;
+    // Diferir carga para que el modal se renderice inmediatamente
+    setTimeout(() => {
+      forkJoin({
+        fotos: this.catalogoService.getAll(`fotos/activo/${item.idActivo}`).pipe(catchError(() => of([]))),
+        asignaciones: this.catalogoService.getAll(`asignaciones/activo/${item.idActivo}`).pipe(catchError(() => of([]))),
+        catalogos: this.loadCatalogosParaActivos()
+      }).subscribe({
+        next: (result) => {
+          this.fotosActivo.set(result.fotos.filter(f => !this.fotosAEliminar.includes(f.idFoto!)));
+          this.updateCatalogLists(result.catalogos);
 
-    // Buscar asignación actual
-    this.catalogoService.getAll(`asignaciones/activo/${item.idActivo}`).subscribe({
-      next: (asigs) => {
-        console.log(`[DEBUG] Asignación encontrada para editar ${item.idActivo}:`, JSON.stringify(asigs));
-        if (asigs && asigs.length > 0) {
-          const asig = asigs[0];
-          this.assignmentActivo.set(asig);
-          // Actualización de referencia para forzar detección de cambios en Angular
-          this.editActivoForm = {
-            ...this.editActivoForm,
-            fkArea: asig.fkArea,
-            fkResguardante: asig.fkResguardante
-          };
-        }
-      },
-      error: (err) => console.error('[DEBUG] Error buscando asignación para editar:', err)
+          if (result.asignaciones && result.asignaciones.length > 0) {
+            const asig = result.asignaciones[0];
+            this.assignmentActivo.set(asig);
+            if (!this.editActivoForm.fkArea)
+              this.editActivoForm.fkArea = asig.fkArea;
+            if (!this.editActivoForm.fkResguardante)
+              this.editActivoForm.fkResguardante = asig.fkResguardante;
+          }
+        },
+        error: (err) => console.error('[DEBUG] Error cargando datos de edición:', err)
+      });
     });
-
-    // Opcional: recargar catálogos en segundo plano
-    this.loadCatalogosParaActivos().subscribe(data => this.updateCatalogLists(data));
   }
 
   closeEditActivo() {
     this.showModalEditActivo = false;
     this.editActivoForm = {};
     this.selectedFiles = [];
+    this.fotosAEliminar = [];
     this.fotosActivo.set([]);
   }
 
   saveEditActivo() {
     if (!this.editActivoForm.nombre) return;
+    
+    if (this.miRol === 2) {
+      const id = this.editActivoForm.idActivo as string;
+      // Subir fotos primero si hay, luego enviar el cambio con los filenames y fotos eliminadas
+      this.uploadFilesForEditor((filenames) => {
+        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar };
+        const cambio: CambioPendiente = {
+          tipoCambio: 'ACTUALIZAR',
+          entidad: 'activos',
+          idEntidad: id,
+          datosJson: JSON.stringify(payload)
+        };
+        
+        this.cambiosService.enviarCambio(cambio).subscribe({
+          next: () => {
+            this.mostrarNotificacion('Cambio enviado a revisión. Un administrador lo evaluará.');
+            this.closeEditActivo();
+            this.loadDataForTab();
+          },
+          error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+        });
+      });
+      return;
+    }
+
     this.isSaving = true;
     const id = this.editActivoForm.idActivo as string;
     const fkArea = this.editActivoForm.fkArea as string;
@@ -543,9 +702,9 @@ export class DesktopDashboardComponent implements OnInit {
           fkResguardante: fkResguardante,
           ultimoActualizadoPor: this.miId
         };
-        this.catalogoService.update('asignaciones', String(this.assignmentActivo()?.idAsignacion), updatedAsig).subscribe({
-          next: () => this.finalizeEditActivo(),
-          error: () => this.finalizeEditActivo()
+        this.catalogoService.update('asignaciones', String(this.assignmentActivo()?.idAsignaciones), updatedAsig).subscribe({
+          next: () => { console.log('[DEBUG] Asignación actualizada correctamente'); this.finalizeEditActivo(); },
+          error: (err) => { console.error('[DEBUG] Error actualizando asignación:', err); this.finalizeEditActivo(); }
         });
       } else {
         const newAsig = {
@@ -574,6 +733,29 @@ export class DesktopDashboardComponent implements OnInit {
 
   saveNuevoActivo() {
     if (!this.newActivo.idActivo || !this.newActivo.nombre) return;
+    
+    if (this.miRol === 2) {
+      // Subir fotos primero si hay, luego enviar el cambio con los filenames
+      this.uploadFilesForEditor((filenames) => {
+        const payload = { ...this.newActivo, estado: '1', _fotosFilenames: filenames, _fotosEliminadas: [] };
+        const cambio: CambioPendiente = {
+          tipoCambio: 'CREAR',
+          entidad: 'activos',
+          datosJson: JSON.stringify(payload)
+        };
+        
+        this.cambiosService.enviarCambio(cambio).subscribe({
+          next: () => {
+            this.mostrarNotificacion('Cambio enviado a revisión. Un administrador lo evaluará.');
+            this.closeCreateActivo();
+            this.loadDataForTab();
+          },
+          error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+        });
+      });
+      return;
+    }
+
     this.isSaving = true;
 
     this.newActivo.creadoPor = this.miId || undefined;
@@ -681,6 +863,25 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   cambiarEstadoGenerico(endpoint: string, id: string, nuevoEstado: string) {
+    if (endpoint === 'activos' && this.miRol === 2) {
+      const activo = this.dataActivos().find(a => a.idActivo === id);
+      if (!activo) return;
+      const payload = { ...activo, estado: nuevoEstado };
+      const cambio: CambioPendiente = {
+        tipoCambio: 'ACTUALIZAR',
+        entidad: 'activos',
+        idEntidad: id,
+        datosJson: JSON.stringify(payload)
+      };
+      this.cambiosService.enviarCambio(cambio).subscribe({
+        next: () => {
+          this.mostrarNotificacion('Cambio de estado enviado a revisión.');
+          this.loadDataForTab();
+        },
+        error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+      });
+      return;
+    }
     this.catalogoService.cambiarEstado(endpoint, id, nuevoEstado).subscribe({
       next: () => this.loadDataForTab(),
       error: console.error
@@ -690,5 +891,137 @@ export class DesktopDashboardComponent implements OnInit {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  /**
+   * Sube los archivos seleccionados (selectedFiles) al servidor y devuelve
+   * los nombres de archivo via callback. Si no hay archivos, callback con [].
+   */
+  private uploadFilesForEditor(callback: (filenames: string[]) => void): void {
+    if (this.selectedFiles.length === 0) {
+      callback([]);
+      return;
+    }
+
+    const filenames: string[] = [];
+    const uploadNext = (index: number) => {
+      if (index < this.selectedFiles.length) {
+        this.catalogoService.uploadFile(this.selectedFiles[index]).subscribe({
+          next: (res: any) => {
+            filenames.push(res.filename);
+            uploadNext(index + 1);
+          },
+          error: () => uploadNext(index + 1) // Continuar aunque falle un archivo
+        });
+      } else {
+        callback(filenames);
+      }
+    };
+    uploadNext(0);
+  }
+
+  // --- CAMBIOS PENDIENTES (inline) ---
+  verDetalleCambio(cambio: CambioPendiente): void {
+    this.cambioSeleccionado = cambio;
+    this.datosJsonParseado = JSON.parse(cambio.datosJson);
+    this.comentarioRechazo = '';
+    this.mostrandoTextarea = false;
+    this.fotosActualesCambio.set([]);
+    this.activoOriginal.set(null);
+    if (cambio.tipoCambio !== 'CREAR' && cambio.idEntidad) {
+      this.catalogoService.getAll(`fotos/activo/${cambio.idEntidad}`).subscribe({
+        next: (fotos) => { this.fotosActualesCambio.set(fotos); },
+        error: () => { this.fotosActualesCambio.set([]); }
+      });
+      if (cambio.tipoCambio === 'ACTUALIZAR') {
+        this.catalogoService.getById('activos', cambio.idEntidad).subscribe({
+          next: (activo) => { this.activoOriginal.set(activo); },
+          error: () => { this.activoOriginal.set(null); }
+        });
+      }
+    }
+  }
+
+  campoCambiado(valorNuevo: any, campo: string): any {
+    if (!this.activoOriginal() || this.activoOriginal()[campo] == null) return {};
+    const original = this.activoOriginal()[campo];
+    const nuevo = valorNuevo;
+    if (original != nuevo) {
+      return { color: '#dc2626', 'font-weight': '600' };
+    }
+    return {};
+  }
+
+  resumenCambiosTexto(): string {
+    if (!this.activoOriginal() || !this.datosJsonParseado || this.cambioSeleccionado?.tipoCambio !== 'ACTUALIZAR') return '';
+    const labels: Record<string, string> = {
+      nombre: 'nombre', descripcion: 'descripción', precio: 'precio',
+      existencias: 'existencias', garantia: 'garantía', nSerie: 'No. Serie',
+      fkMarca: 'marca', fkProvedor: 'proveedor', fkLinea: 'línea',
+      fkPresentacion: 'presentación', fkArea: 'área', fkResguardante: 'resguardante',
+      estado: 'estado'
+    };
+    const cambiados: string[] = [];
+    for (const [campo, label] of Object.entries(labels)) {
+      const original = this.activoOriginal()[campo];
+      const nuevo = this.datosJsonParseado[campo];
+      if (original != null && original != nuevo) {
+        cambiados.push(label);
+      }
+    }
+    if (cambiados.length === 0) return '';
+    return 'Se cambió: ' + cambiados.join(', ') + '.';
+  }
+
+  cerrarModalCambio(): void {
+    this.cambioSeleccionado = null;
+    this.datosJsonParseado = null;
+    this.comentarioRechazo = '';
+    this.mostrandoTextarea = false;
+    this.fotosActualesCambio.set([]);
+    this.activoOriginal.set(null);
+  }
+
+  aprobarCambio(): void {
+    if (!this.cambioSeleccionado?.idCambio) return;
+    this.cambiosService.aprobarCambio(this.cambioSeleccionado.idCambio).subscribe({
+      next: () => {
+        this.cerrarModalCambio();
+        this.loadDataForTab();
+        this.cargarContadorPendientes();
+        this.mostrarNotificacion('Cambio aprobado correctamente');
+      },
+      error: () => this.mostrarNotificacion('Error al aprobar el cambio', true)
+    });
+  }
+
+  iniciarRechazo(): void {
+    if (!this.mostrandoTextarea) {
+      this.mostrandoTextarea = true;
+    } else {
+      this.rechazarCambio();
+    }
+  }
+
+  rechazarCambio(): void {
+    if (!this.cambioSeleccionado?.idCambio) return;
+    this.cambiosService.rechazarCambio(this.cambioSeleccionado.idCambio, this.comentarioRechazo).subscribe({
+      next: () => {
+        this.cerrarModalCambio();
+        this.loadDataForTab();
+        this.cargarContadorPendientes();
+        this.mostrarNotificacion('Cambio rechazado');
+      },
+      error: () => this.mostrarNotificacion('Error al rechazar el cambio', true)
+    });
+  }
+
+  getDatosResumen(datosJson: string): string {
+    try {
+      const obj = JSON.parse(datosJson);
+      return obj.nombre ? obj.nombre : 'Sin nombre';
+    } catch {
+      return 'Datos inválidos';
+    }
   }
 }

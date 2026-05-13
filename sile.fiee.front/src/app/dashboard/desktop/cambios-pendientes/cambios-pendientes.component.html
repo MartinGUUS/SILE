@@ -1,0 +1,120 @@
+<div class="page-header">
+  <h1>Cambios por Aceptar</h1>
+</div>
+
+<!-- Notificación toast -->
+<div *ngIf="mensaje" style="padding: 0.75rem 1rem; margin-bottom: 1rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500; animation: fadeIn 0.3s;"
+  [style.background]="mensajeError ? '#fef2f2' : '#ecfdf5'"
+  [style.color]="mensajeError ? '#dc2626' : '#059669'"
+  [style.border]="mensajeError ? '1px solid #fecaca' : '1px solid #a7f3d0'">
+  {{ mensaje }}
+</div>
+   
+<div *ngIf="cargando && cambios.length === 0" style="text-align: center; padding: 2rem;">
+  <div style="width: 32px; height: 32px; border: 3px solid var(--gray-100); border-top-color: var(--gray-900); border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto;"></div>
+</div>
+<div *ngIf="error" style="color: #dc2626; padding: 1rem;">{{ error }}</div>
+
+<div *ngIf="!cargando && !error && cambios.length === 0" style="text-align: center; padding: 3rem; color: var(--gray-500);">
+  <div style="font-size: 2rem; margin-bottom: 0.5rem;">✓</div>
+  <p>No hay cambios pendientes por revisar</p>
+</div>
+
+<div class="table-container" *ngIf="!cargando && !error && cambios.length > 0">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>ID Activo</th>
+        <th>Tipo Cambio</th>
+        <th>Fecha</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let c of cambios">
+        <td>
+          <span style="font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--gray-100);"
+                [ngStyle]="{'color': c.tipoCambio === 'CREAR' ? '#059669' : (c.tipoCambio === 'ACTUALIZAR' ? '#d97706' : '#dc2626')}">
+            <span *ngIf="c.tipoCambio === 'CREAR'">+ CREAR</span>
+            <span *ngIf="c.tipoCambio === 'ACTUALIZAR'">✎ ACTUALIZAR</span>
+            <span *ngIf="c.tipoCambio === 'ELIMINAR'">× ELIMINAR</span>
+          </span>
+        </td>
+        <td>{{ c.tipoCambio === 'CREAR' ? 'Nuevo' : c.idEntidad }}</td>
+        <td>{{ c.tipoCambio }}</td>
+        <td>{{ c.creadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
+        <td>
+          <button class="action-btn" style="background: var(--gray-900); color: white;" (click)="verDetalle(c)">Revisar</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal Detalle -->
+<div class="modal-overlay" *ngIf="cambioSeleccionado" (click)="cerrarModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <button class="close-btn" (click)="cerrarModal()">✕</button>
+    <h2 style="margin-bottom: 1.5rem;">Revisión de Cambio ({{ cambioSeleccionado.tipoCambio }})</h2>
+    
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Nombre</label>
+        <input disabled [value]="datosJsonParseado?.nombre || 'N/A'" />
+      </div>
+      <div class="form-group full-width">
+        <label>Descripción</label>
+        <input disabled [value]="datosJsonParseado?.descripcion || 'N/A'" />
+      </div>
+      <div class="form-group">
+        <label>Precio</label>
+        <input disabled [value]="datosJsonParseado?.precio ? ('$' + datosJsonParseado.precio) : 'N/A'" />
+      </div>
+      <div class="form-group">
+        <label>No. Serie</label>
+        <input disabled [value]="datosJsonParseado?.nSerie || 'N/A'" />
+      </div>
+      <div class="form-group">
+        <label>Marca (ID)</label>
+        <input disabled [value]="datosJsonParseado?.fkMarca || 'N/A'" />
+      </div>
+      <div class="form-group">
+        <label>Proveedor (ID)</label>
+        <input disabled [value]="datosJsonParseado?.fkProvedor || 'N/A'" />
+      </div>
+      <div class="form-group">
+        <label>Área (ID)</label>
+        <input disabled [value]="datosJsonParseado?.fkArea || 'N/A'" />
+      </div>
+      <div class="form-group">
+        <label>Resguardante (ID)</label>
+        <input disabled [value]="datosJsonParseado?.fkResguardante || 'N/A'" />
+      </div>
+
+      <!-- Fotos adjuntas -->
+      <div class="form-group full-width" *ngIf="datosJsonParseado?._fotosFilenames?.length > 0">
+        <label>Fotos adjuntas ({{ datosJsonParseado._fotosFilenames.length }})</label>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 0.5rem; margin-top: 0.5rem;">
+          <div *ngFor="let f of datosJsonParseado._fotosFilenames" style="border-radius: 8px; overflow: hidden; border: 1px solid var(--border-color); aspect-ratio: 1;">
+            <img [src]="'/fotos/view/' + f" style="width: 100%; height: 100%; object-fit: cover;" />
+          </div>
+        </div>
+      </div>
+      <div class="form-group full-width" *ngIf="datosJsonParseado?._fotosEliminadas?.length > 0">
+        <label style="color: #dc2626;">Fotos a eliminar ({{ datosJsonParseado._fotosEliminadas.length }}) — IDs: {{ datosJsonParseado._fotosEliminadas.join(', ') }}</label>
+      </div>
+      
+      <div class="form-group full-width" *ngIf="mostrandoTextarea">
+        <label style="color: #dc2626;">Motivo del rechazo</label>
+        <textarea [(ngModel)]="comentarioRechazo" style="width: 100%; padding: 0.75rem; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.875rem; background: #fef2f2; outline: none; resize: vertical; min-height: 80px;" placeholder="Explique por qué se rechaza el cambio..."></textarea>
+      </div>
+    </div>
+    
+    <div class="modal-actions">
+      <button class="action-btn outline-btn" (click)="cerrarModal()">Cancelar</button>
+      <button class="action-btn danger" (click)="iniciarRechazo()">Rechazar</button>
+      <button class="action-btn success" (click)="aprobar()">Aceptar</button>
+    </div>
+  </div>
+</div>

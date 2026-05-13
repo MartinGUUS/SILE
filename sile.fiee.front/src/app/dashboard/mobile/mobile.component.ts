@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnDestroy, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { AuthService } from '../../services/auth.service';
@@ -67,6 +67,15 @@ export class MobileDashboardComponent implements OnDestroy {
 
   closeCreateForm() {
     this.showCreateForm = false;
+  }
+
+  @HostListener('window:keydown.escape')
+  handleEscape() {
+    if (this.showCreateForm) {
+      this.closeCreateForm();
+    } else if (this.isScanning()) {
+      this.stopScanning();
+    }
   }
 
   loadCatalogosParaActivos() {

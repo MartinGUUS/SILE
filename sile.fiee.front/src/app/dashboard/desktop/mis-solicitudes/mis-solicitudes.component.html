@@ -1,0 +1,53 @@
+<div class="page-header">
+  <h1>Mis Solicitudes</h1>
+</div>
+
+<div *ngIf="cargando && solicitudes.length === 0" style="text-align: center; padding: 2rem;">
+  <div style="width: 32px; height: 32px; border: 3px solid var(--gray-100); border-top-color: var(--gray-900); border-radius: 50%; animation: spin 0.6s linear infinite; margin: 0 auto;"></div>
+</div>
+<div *ngIf="error" style="color: #dc2626; padding: 1rem;">{{ error }}</div>
+
+<div *ngIf="!cargando && !error && solicitudes.length === 0" style="text-align: center; padding: 3rem; color: var(--gray-500);">
+  <div style="font-size: 2rem; margin-bottom: 0.5rem;">ℹ️</div>
+  <p>No has realizado ninguna solicitud de cambio</p>
+</div>
+
+<div class="table-container" *ngIf="!cargando && !error && solicitudes.length > 0">
+  <table class="data-table">
+    <thead>
+      <tr>
+        <th>Tipo</th>
+        <th>ID Activo</th>
+        <th>Resumen</th>
+        <th>Estado</th>
+        <th>Fecha</th>
+        <th>Respuesta</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let s of solicitudes">
+        <td>
+          <span style="font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--gray-100);"
+                [ngStyle]="{'color': s.tipoCambio === 'CREAR' ? '#059669' : (s.tipoCambio === 'ACTUALIZAR' ? '#d97706' : '#dc2626')}">
+            <span *ngIf="s.tipoCambio === 'CREAR'">+ CREAR</span>
+            <span *ngIf="s.tipoCambio === 'ACTUALIZAR'">✎ ACTUALIZAR</span>
+            <span *ngIf="s.tipoCambio === 'ELIMINAR'">× ELIMINAR</span>
+          </span>
+        </td>
+        <td>{{ s.tipoCambio === 'CREAR' ? 'Nuevo' : s.idEntidad }}</td>
+        <td>{{ getDatosResumen(s.datosJson) }}</td>
+        <td>
+          <span class="status-badge" 
+            [ngClass]="{'active': s.estado === 'APROBADO', 'inactive': s.estado === 'RECHAZADO'}"
+            [ngStyle]="s.estado === 'PENDIENTE' ? {'background-color': '#fef9c3', 'color': '#854d0e'} : {}">
+            {{ s.estado }}
+          </span>
+        </td>
+        <td>{{ s.creadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
+        <td>
+          <span *ngIf="s.estado === 'RECHAZADO'" style="font-style: italic; color: var(--gray-500); font-size: 0.85rem;">{{ s.comentario }}</span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

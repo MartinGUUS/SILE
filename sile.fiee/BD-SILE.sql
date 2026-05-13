@@ -274,3 +274,74 @@ VALUES (
         1,
         1
     );
+
+-- ==========================================
+-- TAREA 1: FLUJO DE APROBACIÓN PARA EDITOR
+-- ==========================================
+INSERT IGNORE INTO
+    roles (
+        id_rol,
+        nombre,
+        descripcion,
+        estado
+    )
+VALUES (
+        1,
+        'Administrador',
+        'Puede hacer todo lo relacionado con el sistema',
+        1
+    );
+
+INSERT IGNORE INTO
+    roles (
+        id_rol,
+        nombre,
+        descripcion,
+        estado
+    )
+VALUES (
+        2,
+        'Editor',
+        'Puede crear, editar y eliminar activos con flujo de aprobación',
+        1
+    );
+
+INSERT IGNORE INTO
+    roles (
+        id_rol,
+        nombre,
+        descripcion,
+        estado
+    )
+VALUES (
+        3,
+        'Observador',
+        'Solo puede ver los activos',
+        1
+    );
+
+drop table if exists cambios_pendientes;
+
+CREATE TABLE cambios_pendientes (
+    id_cambio INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_cambio ENUM(
+        'CREAR',
+        'ACTUALIZAR',
+        'ELIMINAR'
+    ) NOT NULL,
+    entidad VARCHAR(50) NOT NULL DEFAULT 'activos',
+    id_entidad VARCHAR(50) DEFAULT NULL,
+    datos_json JSON NOT NULL,
+    id_solicitante INT NOT NULL,
+    id_revisor INT DEFAULT NULL,
+    estado ENUM(
+        'PENDIENTE',
+        'APROBADO',
+        'RECHAZADO'
+    ) NOT NULL DEFAULT 'PENDIENTE',
+    comentario VARCHAR(500) DEFAULT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_solicitante) REFERENCES usuarios (id_usuario),
+    FOREIGN KEY (id_revisor) REFERENCES usuarios (id_usuario)
+);

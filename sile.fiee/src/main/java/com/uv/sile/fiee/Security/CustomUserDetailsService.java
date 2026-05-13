@@ -25,8 +25,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         // Asignar rol basado en fk_rol (por defecto ROLE_USER)
         String role = "ROLE_USER";
-        if (usuario.getFkRol() != null && usuario.getFkRol() == 1) {
-            role = "ROLE_ADMIN";
+        if (usuario.getFkRol() != null) {
+            int fkRol = Integer.parseInt(usuario.getFkRol().toString());
+            if (fkRol == 1) {
+                role = "ROLE_ADMIN";
+            } else if (fkRol == 2) {
+                role = "ROLE_EDITOR";
+            }
         }
 
         boolean enabled = "1".equals(usuario.getEstado());

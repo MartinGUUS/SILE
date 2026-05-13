@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
 @Table(name = "activos")
@@ -29,6 +30,7 @@ public class Activos {
     @Column(name = "garantia")
     private String garantia;
 
+    @JsonProperty("nSerie")
     @Column(name = "n_serie")
     private String nSerie;
 

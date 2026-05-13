@@ -1,8 +1,8 @@
 export interface Asignacion {
-  idAsignacion?: number;
+  idAsignaciones?: number;
   fkActivo?: string;
   fkArea?: string;
-  fkResguardante?: string;
+  fkResguardante?: number;
   estado?: string;
   creadoPor?: number;
   ultimoActualizadoPor?: number;

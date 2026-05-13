@@ -10,5 +10,12 @@ export const routes: Routes = [
   { path: 'register', component: RegisterComponent },
   { path: 'dashboard/mobile', component: MobileDashboardComponent, canActivate: [authGuard] },
   { path: 'dashboard/desktop', component: DesktopDashboardComponent, canActivate: [authGuard] },
+  {
+    path: 'dashboard/desktop/cambios',
+    loadComponent: () => import(
+      './dashboard/desktop/cambios-pendientes/cambios-pendientes.component'
+    ).then(m => m.CambiosPendientesComponent),
+    canActivate: [authGuard]
+  },
   { path: '', redirectTo: '/login', pathMatch: 'full' }
 ];

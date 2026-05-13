@@ -9,5 +9,6 @@
     "/areas": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
     "/resguardantes": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
     "/fotos": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
-    "/asignaciones": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true }
+    "/asignaciones": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true },
+    "/cambios": { "target": "http://localhost:8080", "secure": false, "changeOrigin": true }
 }

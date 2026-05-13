@@ -14,6 +14,7 @@
                 Visualizar Objetos
               </a>
             </li>
+            <!-- Catálogos y gestión: solo Admin -->
             <ng-container *ngIf="miRol === 1">
               <li class="nav-item">
                 <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'marcas'" (click)="setTab('marcas')">
@@ -51,14 +52,27 @@
                   Resguardantes
                 </a>
               </li>
-              <!-- Solo visible para rol 1 (Admin) -->
-              <li class="nav-item" *ngIf="miRol === 1">
+              <li class="nav-item">
                 <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'usuarios'" (click)="setTab('usuarios')">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                   Usuarios
                 </a>
               </li>
+              <li class="nav-item">
+                <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'cambios'" (click)="setTab('cambios')">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2-2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                  Cambios por aceptar
+                  <span class="badge" *ngIf="cantidadPendientes > 0" style="background:#ff4444; margin-left:6px; animation: badgePulse 2s infinite;">{{ cantidadPendientes }}</span>
+                </a>
+              </li>
             </ng-container>
+            <!-- Editor: solo Mis solicitudes además de Visualizar Objetos -->
+            <li class="nav-item" *ngIf="miRol === 2">
+              <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'mis-solicitudes'" (click)="setTab('mis-solicitudes')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16c0 1.1.9 2 2 2h12a2 2 0 0 0 2-2V8l-6-6z"/><path d="M14 3v5h5M16 13H8M16 17H8M10 9H8"/></svg>
+                Mis solicitudes
+              </a>
+            </li>
           </ul>
         </nav>
 
@@ -83,6 +97,15 @@
         </header>
 
         <div class="content-area">
+          <!-- Notificación toast global -->
+          <div *ngIf="notifMensaje" style="position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 1rem 2.25rem 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid transparent; animation: slideIn 0.3s ease-out; max-width: 400px;"
+               [style.background]="notifError ? '#fef2f2' : '#ecfdf5'"
+               [style.color]="notifError ? '#dc2626' : '#059669'"
+               [style.border-color]="notifError ? '#fecaca' : '#a7f3d0'">
+            <span style="font-size: 1.25rem;">{{ notifError ? '⚠️' : '✅' }}</span>
+            <span style="font-weight: 500; flex: 1;">{{ notifMensaje }}</span>
+            <button (click)="cerrarNotificacion()" style="position: absolute; top: 0.35rem; right: 0.5rem; background: none; border: none; font-size: 1rem; cursor: pointer; color: inherit; opacity: 0.5; line-height: 1;">✕</button>
+          </div>
           
           <!-- Vista de ACTIVOS -->
           <div *ngIf="activeTab() === 'activos'">
@@ -93,7 +116,7 @@
                   <option value="1">Activos</option>
                   <option value="2">Inactivos</option>
                 </select>
-                <button class="primary-btn" *ngIf="miRol === 1" (click)="openCreateActivo()">Nuevo Activo</button>
+                <button class="primary-btn" *ngIf="miRol === 1 || miRol === 2" (click)="openCreateActivo()">Nuevo Activo</button>
               </div>
             </div>
 
@@ -140,10 +163,14 @@
                     <td>
                       <ng-container *ngIf="editingId !== item.idActivo">
                         <button class="action-btn" style="background: var(--gray-900); color: white;" (click)="verDetalleActivo(item)">Ver</button>
-                        <button class="action-btn outline-btn" *ngIf="miRol === 1" (click)="openEditActivo(item)">Editar</button>
+                        <button class="action-btn outline-btn" *ngIf="miRol === 1 || miRol === 2" (click)="openEditActivo(item)">Editar</button>
                         <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn success" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
                         <button *ngIf="item.estado === '1' && miRol === 1" class="action-btn danger" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '2')">Desactivar</button>
                         <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
+                        <!-- Editor: mismo flujo pero encolado -->
+                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn success" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
+                        <button *ngIf="item.estado === '1' && miRol === 2" class="action-btn danger" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '2')">Desactivar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
                       </ng-container>
                       <ng-container *ngIf="editingId === item.idActivo">
                         <button class="action-btn success" (click)="saveEditCatalogo('activos', item.idActivo)">Guardar</button>
@@ -255,7 +282,7 @@
                   <option value="1">Activos</option>
                   <option value="2">Inactivos</option>
                 </select>
-                <button class="primary-btn" (click)="openCreateCatalogo()">Nuevo Registro</button>
+                <button class="primary-btn" *ngIf="miRol === 1" (click)="openCreateCatalogo()">Nuevo Registro</button>
               </div>
             </div>
 
@@ -306,10 +333,10 @@
                     </td>
                     <td>
                       <ng-container *ngIf="editingId !== getDictId(item)">
-                        <button class="action-btn outline-btn" (click)="startEdit(getDictId(item), item)">Editar</button>
-                        <button *ngIf="item.estado === '2'" class="action-btn success" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '1')">Activar</button>
-                        <button *ngIf="item.estado === '1'" class="action-btn danger" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2'" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro(activeTab(), getDictId(item))">Eliminar</button>
+                        <button *ngIf="miRol === 1" class="action-btn outline-btn" (click)="startEdit(getDictId(item), item)">Editar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn success" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '1')">Activar</button>
+                        <button *ngIf="item.estado === '1' && miRol === 1" class="action-btn danger" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '2')">Desactivar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro(activeTab(), getDictId(item))">Eliminar</button>
                       </ng-container>
                       <ng-container *ngIf="editingId === getDictId(item)">
                         <button class="action-btn success" (click)="saveEditCatalogo(activeTab(), getDictId(item))">Guardar</button>
@@ -320,6 +347,149 @@
                   <tr *ngIf="dataCatalogo().length === 0">
                     <td colspan="6" style="text-align: center; color: var(--gray-500)">Vacío. Agrega registros.</td>
                   </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Vista CAMBIOS POR ACEPTAR (Admin) -->
+          <div *ngIf="activeTab() === 'cambios' && miRol === 1">
+            <div class="page-header">
+              <h1>Cambios por Aceptar</h1>
+              <select class="filter-select" [(ngModel)]="filtroCambios" (change)="onFiltroCambiosChange()">
+                <option value="pendientes">Pendientes</option>
+                <option value="procesados">Procesados</option>
+              </select>
+            </div>
+
+            <!-- Tabla PENDIENTES -->
+            <ng-container *ngIf="filtroCambios === 'pendientes'">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>ID Activo</th>
+                      <th>Tipo Cambio</th>
+                      <th>Fecha</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let c of dataCambios()">
+                      <td>
+                        <span style="font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--gray-100);"
+                              [ngStyle]="{'color': c.tipoCambio === 'CREAR' ? '#059669' : (c.tipoCambio === 'ACTUALIZAR' ? '#d97706' : '#dc2626')}">
+                          {{ c.tipoCambio }}
+                        </span>
+                      </td>
+                      <td>{{ c.tipoCambio === 'CREAR' ? 'Nuevo' : c.idEntidad }}</td>
+                      <td>{{ c.tipoCambio }}</td>
+                      <td>{{ c.creadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td>
+                        <button class="action-btn success" (click)="verDetalleCambio(c)">Revisar</button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="!cargandoCambios && dataCambios().length === 0">
+                      <td colspan="5" style="text-align: center; color: var(--gray-500);">No hay cambios pendientes por revisar.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+
+            <!-- Tabla PROCESADOS -->
+            <ng-container *ngIf="filtroCambios === 'procesados'">
+              <div class="table-container">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Tipo</th>
+                      <th>ID Activo</th>
+                      <th>Solicitante ID</th>
+                      <th>Resumen</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                      <th>Revisor ID</th>
+                      <th>Detalles</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let c of dataProcesados()">
+                      <td>
+                        <span style="font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--gray-100);"
+                              [ngStyle]="{'color': c.tipoCambio === 'CREAR' ? '#059669' : (c.tipoCambio === 'ACTUALIZAR' ? '#d97706' : '#dc2626')}">
+                          {{ c.tipoCambio }}
+                        </span>
+                      </td>
+                      <td>{{ c.tipoCambio === 'CREAR' ? 'Nuevo' : c.idEntidad }}</td>
+                      <td>{{ c.idSolicitante || '—' }}</td>
+                      <td>{{ getDatosResumen(c.datosJson) }}</td>
+                      <td>
+                        <span class="status-badge"
+                          [class.active]="c.estado === 'APROBADO'"
+                          [class.inactive]="c.estado === 'RECHAZADO'">
+                          {{ c.estado === 'APROBADO' ? 'Aprobado' : 'Rechazado' }}
+                        </span>
+                      </td>
+                      <td>{{ c.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
+                      <td>{{ c.idRevisor || '—' }}</td>
+                      <td>
+                        <button class="action-btn outline-btn" (click)="verDetalleCambio(c)">Ver</button>
+                      </td>
+                    </tr>
+                    <tr *ngIf="!cargandoCambios && dataProcesados().length === 0">
+                      <td colspan="8" style="text-align: center; color: var(--gray-500);">No hay cambios procesados aún.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- Vista MIS SOLICITUDES (Editor) -->
+          <div *ngIf="activeTab() === 'mis-solicitudes' && miRol === 2">
+            <div class="page-header">
+              <h1>Mis Solicitudes</h1>
+            </div>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Tipo</th>
+                    <th>ID Activo</th>
+                    <th>Resumen</th>
+                    <th>Estado</th>
+                    <th>Fecha</th>
+                    <th>Respuesta</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let s of dataSolicitudes()">
+                    <td>
+                      <span style="font-weight: 600; padding: 0.2rem 0.5rem; border-radius: 4px; background: var(--gray-100);"
+                            [ngStyle]="{'color': s.tipoCambio === 'CREAR' ? '#059669' : (s.tipoCambio === 'ACTUALIZAR' ? '#d97706' : '#dc2626')}">
+                        {{ s.tipoCambio }}
+                      </span>
+                    </td>
+                    <td>{{ s.tipoCambio === 'CREAR' ? 'Nuevo' : s.idEntidad }}</td>
+                    <td>{{ getDatosResumen(s.datosJson) }}</td>
+                    <td>
+                      <span class="status-badge"
+                        [class.active]="s.estado === 'APROBADO'"
+                        [class.inactive]="s.estado === 'RECHAZADO'"
+                        [ngStyle]="s.estado === 'PENDIENTE' ? {'background-color': '#fef9c3', 'color': '#854d0e'} : {}">
+                        {{ s.estado }}
+                      </span>
+                    </td>
+                    <td>{{ s.creadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
+                    <td>
+                      <span *ngIf="s.estado === 'RECHAZADO'" style="font-style: italic; color: var(--gray-500); font-size: 0.85rem;">{{ s.comentario }}</span>
+                    </td>
+                  </tr>
+              <tr *ngIf="!cargandoSolicitudes && dataSolicitudes().length === 0">
+                  <td colspan="6" style="text-align: center; color: var(--gray-500);">No has realizado ninguna solicitud de cambio.</td>
+                </tr>
                 </tbody>
               </table>
             </div>
@@ -498,7 +668,7 @@
           <div class="photos-gallery">
             <div class="photo-card" *ngFor="let f of fotosActivo()">
               <img [src]="'/fotos/view/' + f.foto" alt="Foto del activo" (click)="openImagePreview('/fotos/view/' + f.foto)" style="cursor: pointer;">
-              <button class="delete-photo-btn" (click)="deleteFoto(f.idFoto!)" title="Eliminar foto">✕</button>
+              <button class="delete-photo-btn" *ngIf="miRol === 1" (click)="deleteFoto(f.idFoto!)" title="Eliminar foto">✕</button>
             </div>
             <div class="no-photos" *ngIf="fotosActivo().length === 0">
               No hay fotos registradas para este activo.
@@ -564,12 +734,14 @@
             <div class="form-group">
               <label>Área</label>
               <select [(ngModel)]="editActivoForm.fkArea">
+                <option value="">Seleccionar área...</option>
                 <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.idArea }} - {{ a.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Resguardante</label>
               <select [(ngModel)]="editActivoForm.fkResguardante">
+                <option [ngValue]="null">Seleccionar resguardante...</option>
                 <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
               </select>
             </div>
@@ -578,7 +750,10 @@
               <div class="photos-gallery small">
                 <div class="photo-card" *ngFor="let f of fotosActivo()">
                   <img [src]="'/fotos/view/' + f.foto" alt="Foto" (click)="openImagePreview('/fotos/view/' + f.foto)" style="cursor: pointer;">
-                  <button class="delete-photo-btn" (click)="deleteFoto(f.idFoto!)">✕</button>
+                  <button class="delete-photo-btn" *ngIf="miRol === 1 || miRol === 2" (click)="deleteFoto(f.idFoto!)" title="Eliminar foto">✕</button>
+                </div>
+                <div *ngIf="fotosActivo().length === 0" style="color: var(--gray-500); font-size: 0.85rem;">
+                  No hay fotos registradas.
                 </div>
               </div>
             </div>
@@ -593,6 +768,179 @@
             <button class="primary-btn" (click)="saveEditActivo()" [disabled]="isSaving">
               {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Revisar Cambio Pendiente -->
+      <div class="modal-overlay" *ngIf="cambioSeleccionado" (click)="cerrarModalCambio()">
+        <div class="modal-content" (click)="$event.stopPropagation()">
+          <button class="close-btn" (click)="cerrarModalCambio()">✕</button>
+          <h2 style="margin-bottom: 1.5rem;">Revisión de Cambio ({{ cambioSeleccionado.tipoCambio }})</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-color);">
+            <span style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem; font-weight: 600;"
+                  [ngStyle]="{'color': cambioSeleccionado.tipoCambio === 'CREAR' ? '#059669' : (cambioSeleccionado.tipoCambio === 'ACTUALIZAR' ? '#d97706' : '#dc2626')}">
+              {{ cambioSeleccionado.tipoCambio }}
+            </span>
+            <span style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem; color: var(--gray-600);">
+              <strong>ID:</strong> {{ cambioSeleccionado.idEntidad || 'Nuevo' }}
+            </span>
+            <span style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem; color: var(--gray-600);">
+              <strong>Solicitante ID:</strong> {{ cambioSeleccionado.idSolicitante }}
+            </span>
+            <span *ngIf="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem;" 
+              [ngStyle]="{'color': datosJsonParseado?.estado === '3' ? '#dc2626' : (datosJsonParseado?.estado === '2' ? '#d97706' : '#059669')}">
+              <strong>Nuevo estado:</strong>
+              {{ datosJsonParseado?.estado === '3' ? 'Eliminado' : (datosJsonParseado?.estado === '2' ? 'Inactivo' : (datosJsonParseado?.estado === '1' ? 'Activo' : 'N/A')) }}
+            </span>
+            <span *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" class="status-badge"
+              [class.active]="cambioSeleccionado.estado === 'APROBADO'"
+              [class.inactive]="cambioSeleccionado.estado === 'RECHAZADO'"
+              style="margin-left: auto;">
+              {{ cambioSeleccionado.estado === 'APROBADO' ? 'Aprobado' : 'Rechazado' }}
+            </span>
+          </div>
+          <div *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--gray-600);">
+            <span><strong>Revisor ID:</strong> {{ cambioSeleccionado.idRevisor || '—' }}</span>
+            <span><strong>Fecha:</strong> {{ cambioSeleccionado.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
+            <span *ngIf="cambioSeleccionado.comentario"><strong>Comentario:</strong> {{ cambioSeleccionado.comentario }}</span>
+          </div>
+
+          <div *ngIf="cambioSeleccionado?.estado === 'APROBADO' && resumenCambiosTexto()" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #dc2626; font-weight: 500;">
+            {{ resumenCambiosTexto() }}
+          </div>
+          
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Nombre</label>
+              <input disabled [value]="datosJsonParseado?.nombre || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.nombre, 'nombre')" />
+            </div>
+            <div class="form-group">
+              <label>Precio</label>
+              <input disabled [value]="datosJsonParseado?.precio ? ('$' + datosJsonParseado.precio) : 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.precio, 'precio')" />
+            </div>
+            <div class="form-group full-width">
+              <label>Descripción</label>
+              <input disabled [value]="datosJsonParseado?.descripcion || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.descripcion, 'descripcion')" />
+            </div>
+            <div class="form-group">
+              <label>No. Serie</label>
+              <input disabled [value]="datosJsonParseado?.nSerie || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.nSerie, 'nSerie')" />
+            </div>
+            <div class="form-group">
+              <label>Garantía</label>
+              <input disabled [value]="datosJsonParseado?.garantia || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.garantia, 'garantia')" />
+            </div>
+            <div class="form-group">
+              <label>Existencias</label>
+              <input disabled [value]="datosJsonParseado?.existencias ?? 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.existencias, 'existencias')" />
+            </div>
+            <div class="form-group">
+              <label>Marca</label>
+              <input disabled [value]="getMarcaName(datosJsonParseado?.fkMarca)" [ngStyle]="campoCambiado(datosJsonParseado?.fkMarca, 'fkMarca')" />
+            </div>
+            <div class="form-group">
+              <label>Proveedor</label>
+              <input disabled [value]="getProveedorName(datosJsonParseado?.fkProvedor)" [ngStyle]="campoCambiado(datosJsonParseado?.fkProvedor, 'fkProvedor')" />
+            </div>
+            <div class="form-group">
+              <label>Línea</label>
+              <input disabled [value]="getLineaName(datosJsonParseado?.fkLinea)" [ngStyle]="campoCambiado(datosJsonParseado?.fkLinea, 'fkLinea')" />
+            </div>
+            <div class="form-group">
+              <label>Presentación</label>
+              <input disabled [value]="getPresentacionName(datosJsonParseado?.fkPresentacion)" [ngStyle]="campoCambiado(datosJsonParseado?.fkPresentacion, 'fkPresentacion')" />
+            </div>
+          </div>
+
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin: 0.5rem 0;">
+            <h4 style="margin: 0 0 0.75rem 0; font-size: 0.95rem; color: var(--gray-800);">Asignación</h4>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Área</label>
+              <input disabled [value]="getAreaName(datosJsonParseado?.fkArea)" [ngStyle]="campoCambiado(datosJsonParseado?.fkArea, 'fkArea')" />
+            </div>
+            <div class="form-group">
+              <label>Resguardante</label>
+              <input disabled [value]="getResguardanteName(datosJsonParseado?.fkResguardante)" [ngStyle]="campoCambiado(datosJsonParseado?.fkResguardante, 'fkResguardante')" />
+            </div>
+          </div>
+
+          <!-- ===== SECCIÓN FOTOS ===== -->
+          <div style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin: 0.5rem 0;">
+            <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--gray-800);">📷 Gestión de Fotos</h4>
+          </div>
+
+          <!-- 1. Fotos actuales del activo (se mantienen) -->
+          <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: var(--gray-50);">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #059669; color: #fff; font-size: 0.75rem; font-weight: 700;">1</span>
+              <strong style="color: #059669; font-size: 0.9rem;">Se mantienen ({{ fotosActualesCambio().length }})</strong>
+            </div>
+            <ng-container *ngIf="fotosActualesCambio().length > 0; else sinFotosActuales">
+              <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem;">
+                <div *ngFor="let f of fotosActualesCambio()" style="border-radius: 8px; overflow: hidden; border: 2px solid #059669; aspect-ratio: 1;">
+                  <img [src]="'/fotos/view/' + f.foto" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" (click)="openImagePreview('/fotos/view/' + f.foto)" />
+                </div>
+              </div>
+            </ng-container>
+            <ng-template #sinFotosActuales>
+              <p style="color: var(--gray-500); font-size: 0.85rem; margin: 0;">Sin fotos actuales.</p>
+            </ng-template>
+          </div>
+
+          <!-- 2. Fotos nuevas a agregar -->
+          <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: #ecfdf5;" *ngIf="datosJsonParseado?._fotosFilenames?.length > 0">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #2563eb; color: #fff; font-size: 0.75rem; font-weight: 700;">2</span>
+              <strong style="color: #2563eb; font-size: 0.9rem;">Se agregan ({{ datosJsonParseado._fotosFilenames.length }})</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem;">
+              <div *ngFor="let f of datosJsonParseado._fotosFilenames" style="border-radius: 8px; overflow: hidden; border: 2px solid #2563eb; aspect-ratio: 1;">
+                <img [src]="'/fotos/view/' + f" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" (click)="openImagePreview('/fotos/view/' + f)" />
+              </div>
+            </div>
+          </div>
+          <div *ngIf="!datosJsonParseado?._fotosFilenames?.length" style="margin-bottom: 1rem;">
+            <p style="color: var(--gray-500); font-size: 0.85rem; margin: 0 0 0 0.5rem;">No se agregan fotos nuevas.</p>
+          </div>
+
+          <!-- 3. Fotos a eliminar -->
+          <div *ngIf="datosJsonParseado?._fotosEliminadas?.length > 0" style="border: 1px solid #fecaca; border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: #fef2f2;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
+              <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #dc2626; color: #fff; font-size: 0.75rem; font-weight: 700;">3</span>
+              <strong style="color: #dc2626; font-size: 0.9rem;">Se eliminan ({{ datosJsonParseado._fotosEliminadas.length }})</strong>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem;">
+              <ng-container *ngFor="let idElim of datosJsonParseado._fotosEliminadas">
+                <ng-container *ngFor="let f of fotosActualesCambio()">
+                  <div *ngIf="f.idFoto === idElim" style="border-radius: 8px; overflow: hidden; border: 2px solid #dc2626; aspect-ratio: 1; position: relative;">
+                    <img [src]="'/fotos/view/' + f.foto" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.5;">
+                    <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #dc2626; font-size: 1.5rem; font-weight: 700;">✕</span>
+                  </div>
+                </ng-container>
+              </ng-container>
+            </div>
+          </div>
+          <div *ngIf="!datosJsonParseado?._fotosEliminadas?.length" style="margin-bottom: 1rem;">
+            <p style="color: var(--gray-500); font-size: 0.85rem; margin: 0 0 0 0.5rem;">No se eliminan fotos.</p>
+          </div>
+            
+            <div class="form-group full-width" *ngIf="mostrandoTextarea">
+              <label style="color: #dc2626;">Motivo del rechazo</label>
+              <textarea [(ngModel)]="comentarioRechazo" style="width: 100%; padding: 0.75rem; border: 1px solid #fecaca; border-radius: 8px; font-size: 0.875rem; background: #fef2f2; outline: none; resize: vertical; min-height: 80px;" placeholder="Explique por qué se rechaza el cambio..."></textarea>
+            </div>
+          
+          <div class="modal-actions">
+            <ng-container *ngIf="cambioSeleccionado?.estado === 'PENDIENTE'">
+              <button class="action-btn" style="background: var(--gray-900); color: #fff;" (click)="cerrarModalCambio()">Cancelar</button>
+              <button class="action-btn" style="background: #dc2626; color: #fff;" (click)="iniciarRechazo()">Rechazar</button>
+              <button class="action-btn" style="background: #059669; color: #fff;" (click)="aprobarCambio()">Aceptar</button>
+            </ng-container>
+            <ng-container *ngIf="cambioSeleccionado?.estado !== 'PENDIENTE'">
+              <button class="action-btn" style="background: var(--gray-900); color: #fff;" (click)="cerrarModalCambio()">Cerrar</button>
+            </ng-container>
           </div>
         </div>
       </div>
