@@ -2,8 +2,10 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="sidebar-header">
-          <h2>SILE</h2>
-          <span class="badge">Desktop</span>
+          <span class="sidebar-logo">SILE</span>
+          <span class="sidebar-rol-badge" *ngIf="miRol === 1">Admin</span>
+          <span class="sidebar-rol-badge editor" *ngIf="miRol === 2">Editor</span>
+          <span class="sidebar-rol-badge obs" *ngIf="miRol === 3">Observador</span>
         </div>
         
         <nav class="sidebar-nav">
@@ -88,22 +90,23 @@
       <main class="main-content">
         <header class="topbar">
           <div class="topbar-search">
-            <input type="text" placeholder="Buscar..." class="search-input">
+            <input *ngIf="activeTab() === 'activos'" type="text" placeholder="Buscar por nombre, código, serie..." class="search-input" [(ngModel)]="searchQuery" (input)="onSearchChange()">
+            <span *ngIf="activeTab() !== 'activos'" class="search-placeholder"></span>
           </div>
           <div class="user-profile">
-            <div class="avatar"></div>
-            <span>{{ miRol === 1 ? 'Administrador' : 'Usuario' }}</span>
+            <div class="avatar">{{ userName().charAt(0).toUpperCase() }}</div>
+            <span>Hola, {{ userName() }}</span>
           </div>
         </header>
 
         <div class="content-area">
           <!-- Notificación toast global -->
-          <div *ngIf="notifMensaje" style="position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 1rem 2.25rem 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid transparent; animation: slideIn 0.3s ease-out; max-width: 400px;"
-               [style.background]="notifError ? '#fef2f2' : '#ecfdf5'"
-               [style.color]="notifError ? '#dc2626' : '#059669'"
-               [style.border-color]="notifError ? '#fecaca' : '#a7f3d0'">
-            <span style="font-size: 1.25rem;">{{ notifError ? '⚠️' : '✅' }}</span>
-            <span style="font-weight: 500; flex: 1;">{{ notifMensaje }}</span>
+          <div *ngIf="notifMensaje()" style="position: fixed; top: 20px; right: 20px; z-index: 10000; padding: 1rem 2.25rem 1rem 1.5rem; border-radius: 12px; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); border: 1px solid transparent; animation: slideIn 0.3s ease-out; max-width: 400px;"
+               [style.background]="notifError() ? '#fef2f2' : '#ecfdf5'"
+               [style.color]="notifError() ? '#dc2626' : '#059669'"
+               [style.border-color]="notifError() ? '#fecaca' : '#a7f3d0'">
+            <span style="font-size: 1.25rem;">{{ notifError() ? '!' : '' }}</span>
+            <span style="font-weight: 500; flex: 1;">{{ notifMensaje() }}</span>
             <button (click)="cerrarNotificacion()" style="position: absolute; top: 0.35rem; right: 0.5rem; background: none; border: none; font-size: 1rem; cursor: pointer; color: inherit; opacity: 0.5; line-height: 1;">✕</button>
           </div>
           
@@ -157,20 +160,20 @@
                     <td>
                       <ng-container *ngIf="editingId !== item.idActivo">{{ '$' + item.precio }}</ng-container>
                       <ng-container *ngIf="editingId === item.idActivo">
-                        <input type="number" [(ngModel)]="editForm.precio" class="edit-input" style="width: 80px">
+                        <input type="number" min="0" [(ngModel)]="editForm.precio" class="edit-input" style="width: 80px">
                       </ng-container>
                     </td>
                     <td>
                       <ng-container *ngIf="editingId !== item.idActivo">
-                        <button class="action-btn" style="background: var(--gray-900); color: white;" (click)="verDetalleActivo(item)">Ver</button>
-                        <button class="action-btn outline-btn" *ngIf="miRol === 1 || miRol === 2" (click)="openEditActivo(item)">Editar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn success" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
+                        <button class="action-btn" (click)="verDetalleActivo(item)">Ver</button>
+                        <button class="action-btn edit" *ngIf="miRol === 1 || miRol === 2" (click)="openEditActivo(item)">Editar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn activate" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
                         <button *ngIf="item.estado === '1' && miRol === 1" class="action-btn danger" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn danger" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
                         <!-- Editor: mismo flujo pero encolado -->
-                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn success" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn activate" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
                         <button *ngIf="item.estado === '1' && miRol === 2" class="action-btn danger" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn danger" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
                       </ng-container>
                       <ng-container *ngIf="editingId === item.idActivo">
                         <button class="action-btn success" (click)="saveEditCatalogo('activos', item.idActivo)">Guardar</button>
@@ -189,7 +192,11 @@
           <!-- Vista de USUARIOS -->
           <div *ngIf="activeTab() === 'usuarios' && miRol === 1">
             <div class="page-header">
-              <h1>Administración de Usuarios</h1>
+              <h1>Administracion de Usuarios</h1>
+              <select class="filter-select" [(ngModel)]="filtroEstadoUsuarios" (change)="onFiltroUsuariosChange()">
+                <option value="1">Activos</option>
+                <option value="2">Inactivos</option>
+              </select>
             </div>
 
             <div class="table-container">
@@ -235,10 +242,10 @@
                     </td>
                     <td>
                       <ng-container *ngIf="editingId !== user.idUsuario">
-                        <button class="action-btn outline-btn" (click)="startEdit(user.idUsuario!, user)">Editar</button>
+                        <button class="action-btn edit" (click)="startEdit(user.idUsuario!, user)">Editar</button>
                         <button 
                           *ngIf="user.estado === '2'" 
-                          class="action-btn success"
+                          class="action-btn activate"
                           [disabled]="user.idUsuario === miId"
                           (click)="cambiarEstadoUsuario(user.idUsuario!, '1')">
                           Activar
@@ -252,8 +259,7 @@
                         </button>
                         <button 
                           *ngIf="user.estado === '2'" 
-                          class="action-btn"
-                          style="background:#7f1d1d;color:#fff;"
+                          class="action-btn danger"
                           [disabled]="user.idUsuario === miId"
                           (click)="eliminarUsuario(user.idUsuario!)">
                           Eliminar
@@ -278,7 +284,7 @@
             <div class="page-header">
               <h1 style="text-transform: capitalize;">Catálogo: {{ activeTab() }}</h1>
               <div style="display: flex; gap: 0.75rem; align-items: center;">
-                <select class="filter-select" [(ngModel)]="filtroEstadoCatalogo" (change)="onFiltroCatalogoChange()">
+                <select class="filter-select" [ngModel]="filtroEstadoCatalogo[activeTab()] || '1'" (ngModelChange)="filtroEstadoCatalogo[activeTab()] = $event; onFiltroCatalogoChange()">
                   <option value="1">Activos</option>
                   <option value="2">Inactivos</option>
                 </select>
@@ -333,10 +339,10 @@
                     </td>
                     <td>
                       <ng-container *ngIf="editingId !== getDictId(item)">
-                        <button *ngIf="miRol === 1" class="action-btn outline-btn" (click)="startEdit(getDictId(item), item)">Editar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn success" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '1')">Activar</button>
+                        <button *ngIf="miRol === 1" class="action-btn edit" (click)="startEdit(getDictId(item), item)">Editar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn activate" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '1')">Activar</button>
                         <button *ngIf="item.estado === '1' && miRol === 1" class="action-btn danger" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn" style="background:#7f1d1d;color:#fff;" (click)="eliminarRegistro(activeTab(), getDictId(item))">Eliminar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn danger" (click)="eliminarRegistro(activeTab(), getDictId(item))">Eliminar</button>
                       </ng-container>
                       <ng-container *ngIf="editingId === getDictId(item)">
                         <button class="action-btn success" (click)="saveEditCatalogo(activeTab(), getDictId(item))">Guardar</button>
@@ -509,11 +515,11 @@
             <input type="text" [(ngModel)]="newCatalogo.id" placeholder="Ej: MRC-001, PRV-002..." style="font-family: monospace;">
           </div>
           <div class="form-group" *ngIf="activeTab() !== 'resguardantes'" style="margin-top: 0.75rem;">
-            <label>Nombre</label>
+            <label>Nombre *</label>
             <input type="text" [(ngModel)]="newCatalogo.nombre">
           </div>
           <div class="form-group" *ngIf="activeTab() === 'areas'" style="margin-top: 0.75rem;">
-            <label>Descripción</label>
+            <label>Descripción *</label>
             <input type="text" [(ngModel)]="newCatalogo.descripcion">
           </div>
           <div class="form-group" *ngIf="activeTab() === 'resguardantes'">
@@ -538,50 +544,50 @@
           <h2 style="margin-bottom: 1.5rem;">Agregar Nuevo Activo</h2>
           <div class="form-grid">
             <div class="form-group">
-              <label>No. Activo</label>
+              <label>No. Activo *</label>
               <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003" #idActivoInput>
             </div>
             <div class="form-group">
-              <label>Nombre</label>
+              <label>Nombre *</label>
               <input type="text" [(ngModel)]="newActivo.nombre">
             </div>
             <div class="form-group full-width">
-              <label>Descripción</label>
+              <label>Descripción *</label>
               <input type="text" [(ngModel)]="newActivo.descripcion">
             </div>
             <div class="form-group">
-              <label>Precio</label>
-              <input type="number" [(ngModel)]="newActivo.precio">
+              <label>Precio *</label>
+              <input type="number" min="0" [(ngModel)]="newActivo.precio">
             </div>
             <!-- Existencias siempre será 1 por defecto -->
             <div class="form-group">
-              <label>Garantía</label>
+              <label>Garantía *</label>
               <input type="text" [(ngModel)]="newActivo.garantia">
             </div>
             <div class="form-group">
-              <label>No. Serie</label>
+              <label>No. Serie *</label>
               <input type="text" [(ngModel)]="newActivo.nSerie">
             </div>
             <div class="form-group">
-              <label>Marca</label>
+              <label>Marca *</label>
               <select [(ngModel)]="newActivo.fkMarca">
                 <option *ngFor="let m of listMarcas()" [value]="m.idMarca">{{ m.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Proveedor</label>
+              <label>Proveedor *</label>
               <select [(ngModel)]="newActivo.fkProvedor">
                 <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Línea</label>
+              <label>Línea *</label>
               <select [(ngModel)]="newActivo.fkLinea">
                 <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Presentación</label>
+              <label>Presentación *</label>
               <select [(ngModel)]="newActivo.fkPresentacion">
                 <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
               </select>
@@ -611,8 +617,8 @@
             </div>
           </div>
           <div class="modal-actions">
-            <button class="action-btn outline-btn" (click)="closeCreateActivo()" [disabled]="isSaving">Cancelar</button>
-            <button class="action-btn success" (click)="saveNuevoActivo()" [disabled]="isSaving">{{ isSaving ? 'Guardando...' : 'Guardar Activo' }}</button>
+            <button class="action-btn danger" (click)="closeCreateActivo()" [disabled]="isSaving">Cancelar</button>
+            <button class="action-btn activate" (click)="saveNuevoActivo()" [disabled]="isSaving">{{ isSaving ? 'Guardando...' : 'Guardar Activo' }}</button>
           </div>
         </div>
       </div>
@@ -648,11 +654,23 @@
             </div>
             <div class="detail-item">
               <span class="detail-label">Marca</span>
-              <span class="detail-value">{{ selectedActivo?.fkMarca || 'N/A' }}</span>
+              <span class="detail-value">{{ getMarcaName(selectedActivo?.fkMarca) }}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Garantía</span>
               <span class="detail-value">{{ selectedActivo?.garantia || 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Proveedor</span>
+              <span class="detail-value">{{ getProveedorName(selectedActivo?.fkProvedor) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Línea</span>
+              <span class="detail-value">{{ getLineaName(selectedActivo?.fkLinea) }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Presentación</span>
+              <span class="detail-value">{{ getPresentacionName(selectedActivo?.fkPresentacion) }}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Área Asignada</span>
@@ -668,7 +686,6 @@
           <div class="photos-gallery">
             <div class="photo-card" *ngFor="let f of fotosActivo()">
               <img [src]="'/fotos/view/' + f.foto" alt="Foto del activo" (click)="openImagePreview('/fotos/view/' + f.foto)" style="cursor: pointer;">
-              <button class="delete-photo-btn" *ngIf="miRol === 1" (click)="deleteFoto(f.idFoto!)" title="Eliminar foto">✕</button>
             </div>
             <div class="no-photos" *ngIf="fotosActivo().length === 0">
               No hay fotos registradas para este activo.
@@ -692,41 +709,41 @@
               <input type="text" [value]="editActivoForm.idActivo" disabled>
             </div>
             <div class="form-group">
-              <label>Nombre</label>
+              <label>Nombre *</label>
               <input type="text" [(ngModel)]="editActivoForm.nombre">
             </div>
             <div class="form-group full-width">
-              <label>Descripción</label>
+              <label>Descripción *</label>
               <input type="text" [(ngModel)]="editActivoForm.descripcion">
             </div>
             <div class="form-group">
-              <label>Precio</label>
-              <input type="number" [(ngModel)]="editActivoForm.precio">
+              <label>Precio *</label>
+              <input type="number" min="0" [(ngModel)]="editActivoForm.precio">
             </div>
             <div class="form-group">
-              <label>No. Serie</label>
+              <label>No. Serie *</label>
               <input type="text" [(ngModel)]="editActivoForm.nSerie">
             </div>
             <div class="form-group">
-              <label>Marca</label>
+              <label>Marca *</label>
               <select [(ngModel)]="editActivoForm.fkMarca">
                 <option *ngFor="let m of listMarcas()" [value]="m.idMarca">{{ m.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Proveedor</label>
+              <label>Proveedor *</label>
               <select [(ngModel)]="editActivoForm.fkProvedor">
                 <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Línea</label>
+              <label>Línea *</label>
               <select [(ngModel)]="editActivoForm.fkLinea">
                 <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Presentación</label>
+              <label>Presentación *</label>
               <select [(ngModel)]="editActivoForm.fkPresentacion">
                 <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
               </select>
@@ -750,7 +767,7 @@
               <div class="photos-gallery small">
                 <div class="photo-card" *ngFor="let f of fotosActivo()">
                   <img [src]="'/fotos/view/' + f.foto" alt="Foto" (click)="openImagePreview('/fotos/view/' + f.foto)" style="cursor: pointer;">
-                  <button class="delete-photo-btn" *ngIf="miRol === 1 || miRol === 2" (click)="deleteFoto(f.idFoto!)" title="Eliminar foto">✕</button>
+                  <button class="delete-photo-btn" *ngIf="miRol === 1 || miRol === 2" (click)="deleteEditFoto(f.idFoto!)" title="Eliminar foto">✕</button>
                 </div>
                 <div *ngIf="fotosActivo().length === 0" style="color: var(--gray-500); font-size: 0.85rem;">
                   No hay fotos registradas.
@@ -765,7 +782,7 @@
           </div>
           <div class="modal-actions">
             <button class="action-btn danger" (click)="closeEditActivo()">Cancelar</button>
-            <button class="primary-btn" (click)="saveEditActivo()" [disabled]="isSaving">
+            <button class="action-btn activate" (click)="saveEditActivo()" [disabled]="isSaving">
               {{ isSaving ? 'Guardando...' : 'Guardar Cambios' }}
             </button>
           </div>
@@ -806,29 +823,29 @@
             <span *ngIf="cambioSeleccionado.comentario"><strong>Comentario:</strong> {{ cambioSeleccionado.comentario }}</span>
           </div>
 
-          <div *ngIf="cambioSeleccionado?.estado === 'APROBADO' && resumenCambiosTexto()" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #dc2626; font-weight: 500;">
+          <div *ngIf="cambioSeleccionado.estado === 'APROBADO' && resumenCambiosTexto()" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #dc2626; font-weight: 500;">
             {{ resumenCambiosTexto() }}
           </div>
           
           <div class="form-grid">
             <div class="form-group">
-              <label>Nombre</label>
+              <label>Nombre *</label>
               <input disabled [value]="datosJsonParseado?.nombre || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.nombre, 'nombre')" />
             </div>
             <div class="form-group">
-              <label>Precio</label>
+              <label>Precio *</label>
               <input disabled [value]="datosJsonParseado?.precio ? ('$' + datosJsonParseado.precio) : 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.precio, 'precio')" />
             </div>
             <div class="form-group full-width">
-              <label>Descripción</label>
+              <label>Descripción *</label>
               <input disabled [value]="datosJsonParseado?.descripcion || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.descripcion, 'descripcion')" />
             </div>
             <div class="form-group">
-              <label>No. Serie</label>
+              <label>No. Serie *</label>
               <input disabled [value]="datosJsonParseado?.nSerie || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.nSerie, 'nSerie')" />
             </div>
             <div class="form-group">
-              <label>Garantía</label>
+              <label>Garantía *</label>
               <input disabled [value]="datosJsonParseado?.garantia || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.garantia, 'garantia')" />
             </div>
             <div class="form-group">
@@ -836,19 +853,19 @@
               <input disabled [value]="datosJsonParseado?.existencias ?? 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.existencias, 'existencias')" />
             </div>
             <div class="form-group">
-              <label>Marca</label>
+              <label>Marca *</label>
               <input disabled [value]="getMarcaName(datosJsonParseado?.fkMarca)" [ngStyle]="campoCambiado(datosJsonParseado?.fkMarca, 'fkMarca')" />
             </div>
             <div class="form-group">
-              <label>Proveedor</label>
+              <label>Proveedor *</label>
               <input disabled [value]="getProveedorName(datosJsonParseado?.fkProvedor)" [ngStyle]="campoCambiado(datosJsonParseado?.fkProvedor, 'fkProvedor')" />
             </div>
             <div class="form-group">
-              <label>Línea</label>
+              <label>Línea *</label>
               <input disabled [value]="getLineaName(datosJsonParseado?.fkLinea)" [ngStyle]="campoCambiado(datosJsonParseado?.fkLinea, 'fkLinea')" />
             </div>
             <div class="form-group">
-              <label>Presentación</label>
+              <label>Presentación *</label>
               <input disabled [value]="getPresentacionName(datosJsonParseado?.fkPresentacion)" [ngStyle]="campoCambiado(datosJsonParseado?.fkPresentacion, 'fkPresentacion')" />
             </div>
           </div>
@@ -869,7 +886,7 @@
 
           <!-- ===== SECCIÓN FOTOS ===== -->
           <div style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin: 0.5rem 0;">
-            <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--gray-800);">📷 Gestión de Fotos</h4>
+            <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; color: var(--gray-800);">Gestion de Fotos</h4>
           </div>
 
           <!-- 1. Fotos actuales del activo (se mantienen) -->
@@ -933,23 +950,21 @@
             </div>
           
           <div class="modal-actions">
-            <ng-container *ngIf="cambioSeleccionado?.estado === 'PENDIENTE'">
-              <button class="action-btn" style="background: var(--gray-900); color: #fff;" (click)="cerrarModalCambio()">Cancelar</button>
-              <button class="action-btn" style="background: #dc2626; color: #fff;" (click)="iniciarRechazo()">Rechazar</button>
-              <button class="action-btn" style="background: #059669; color: #fff;" (click)="aprobarCambio()">Aceptar</button>
+            <ng-container *ngIf="cambioSeleccionado.estado === 'PENDIENTE'">
+              <button class="action-btn outline-btn" (click)="cerrarModalCambio()">Cancelar</button>
+              <button class="action-btn danger" (click)="iniciarRechazo()">Rechazar</button>
+              <button class="action-btn activate" (click)="aprobarCambio()">Aceptar</button>
             </ng-container>
-            <ng-container *ngIf="cambioSeleccionado?.estado !== 'PENDIENTE'">
-              <button class="action-btn" style="background: var(--gray-900); color: #fff;" (click)="cerrarModalCambio()">Cerrar</button>
+            <ng-container *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'">
+              <button class="action-btn outline-btn" (click)="cerrarModalCambio()">Cerrar</button>
             </ng-container>
           </div>
         </div>
       </div>
 
       <!-- Modal Vista Previa de Imagen -->
-      <div class="modal-overlay" *ngIf="showModalImagePreview" (click)="closeImagePreview()" style="background: rgba(0,0,0,0.9); z-index: 10000;">
-        <div class="modal-content" (click)="$event.stopPropagation()" style="background: transparent; border: none; box-shadow: none; max-width: 90vw; max-height: 90vh; padding: 0; display: flex; justify-content: center; align-items: center;">
-          <button class="close-btn" (click)="closeImagePreview()" style="color: white; top: -40px; right: 0;">✕</button>
-          <img [src]="previewImageUrl" style="max-width: 100%; max-height: 100%; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5);">
-        </div>
+      <div class="modal-overlay" *ngIf="showModalImagePreview" (click)="closeImagePreview()" style="background: rgba(0,0,0,0.92); z-index: 10000; display: flex; align-items: center; justify-content: center;">
+        <button class="close-btn" (click)="closeImagePreview()" style="position: fixed; top: 1rem; right: 1rem; background: rgba(255,255,255,0.2); color: #fff; z-index: 10001;">✕</button>
+        <img [src]="previewImageUrl" (click)="$event.stopPropagation()" style="max-width: 95vw; max-height: 90vh; border-radius: 12px; object-fit: contain; box-shadow: 0 0 60px rgba(0,0,0,0.4);">
       </div>
     </div>

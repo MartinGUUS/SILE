@@ -1,163 +1,518 @@
-    <div class="mobile-container">
-      <header class="mobile-header">
-        <h2>Panel de Escaneo</h2>
-        <button class="logout-btn" (click)="logout()">Salir</button>
-      </header>
+<div class="mob-app">
+  <!-- Toast -->
+  <div class="mob-toast" *ngIf="toastMsg()" [class.error]="toastError()" (click)="toastMsg.set('')">
+    <span>{{ toastError() ? 'Error:' : 'OK' }}</span>
+    <span>{{ toastMsg() }}</span>
+  </div>
 
-      <main class="mobile-main">
-        <div class="scanner-card" *ngIf="!isScanning()">
-          <div class="scanner-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M4 7V4h3"></path>
-              <path d="M4 17v3h3"></path>
-              <path d="M20 7V4h-3"></path>
-              <path d="M20 17v3h-3"></path>
-              <rect x="5" y="11" width="1" height="2"></rect>
-              <rect x="8" y="9" width="2" height="6"></rect>
-              <rect x="12" y="10" width="1" height="4"></rect>
-              <rect x="15" y="9" width="1" height="6"></rect>
-              <rect x="18" y="11" width="1" height="2"></rect>
-            </svg>
-          </div>
-          <h3>Escáner de Activos</h3>
-          <p>Apunta la cámara al código del dispositivo.</p>
-          <button class="scan-btn" (click)="startScanning()">Activar Cámara</button>
+  <!-- HEADER -->
+  <header class="mob-header">
+    <div class="mob-header-left">
+      <span class="mob-logo">SILE</span>
+      <span class="mob-rol-badge" *ngIf="miRol === 1">Admin</span>
+      <span class="mob-rol-badge editor" *ngIf="miRol === 2">Editor</span>
+    </div>
+    <div class="mob-header-right">
+      <span class="mob-greeting">Hola, {{ userName() }}</span>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="mob-main">
+    <!-- ========== TAB: INICIO ========== -->
+    <section class="mob-tab" *ngIf="activeTab() === 'inicio'">
+      <!-- Quick Actions -->
+      <div class="mob-section-title">Acciones rápidas</div>
+      <div class="mob-quick-actions">
+        <button class="mob-action-btn" (click)="startScanning()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V4h3"/><path d="M4 17v3h3"/><path d="M20 7V4h-3"/><path d="M20 17v3h-3"/><rect x="5" y="11" width="1" height="2"/><rect x="8" y="9" width="2" height="6"/><rect x="12" y="10" width="1" height="4"/><rect x="15" y="9" width="1" height="6"/><rect x="18" y="11" width="1" height="2"/></svg>
+          <span>Escanear</span>
+        </button>
+        <button class="mob-action-btn" (click)="openCreateForm()" *ngIf="miRol === 1 || miRol === 2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+          <span>Nuevo</span>
+        </button>
+      </div>
+
+      <!-- Scanner inline -->
+      <ng-container *ngIf="isScanning()">
+        <div class="mob-section-title">Escáner</div>
+        <div class="mob-scanner-box">
+          <video id="video-preview" playsinline></video>
+          <div class="mob-scanner-debug">{{ debugMessage() }}</div>
+          <button class="mob-btn mob-btn-outline" (click)="stopScanning()" style="width:100%; margin-top:0.75rem">Detener escáner</button>
         </div>
+      </ng-container>
 
-        <div class="action-card" *ngIf="!isScanning() && !showCreateForm">
-          <div class="scanner-icon" style="background: #e0f2fe; color: #0284c7;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>
-          </div>
-          <h3>Nuevo Producto</h3>
-          <p>Registra un activo manualmente y sube fotos.</p>
-          <button class="scan-btn secondary" (click)="openCreateForm()">Agregar nuevo producto</button>
+      <!-- Scan searching indicator -->
+      <div class="mob-scan-searching" *ngIf="scanResult() && !isScanning()">
+        <div class="mob-scan-code">{{ scanResult() }}</div>
+        <div *ngIf="buscandoEscaneo()" class="mob-loading-text">Buscando en inventario...</div>
+        <button class="mob-btn mob-btn-sm mob-btn-outline" (click)="scanResult.set(''); buscandoEscaneo.set(false)" style="width:100%;margin-top:0.5rem">Cancelar</button>
+      </div>
+    </section>
+
+    <!-- ========== TAB: INVENTARIO ========== -->
+    <section class="mob-tab" *ngIf="activeTab() === 'inventario'">
+      <div class="mob-inv-header">
+        <div class="mob-search-box">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Buscar por nombre, código, serie..." [(ngModel)]="searchQuery" (input)="onSearchChange()" />
+          <button *ngIf="searchQuery" class="mob-search-clear" (click)="searchQuery=''; onSearchChange()">✕</button>
         </div>
+        <select class="mob-filter-chip" [(ngModel)]="filtroEstado" (change)="onFiltroChange()">
+          <option value="1">Activos</option>
+          <option value="2">Inactivos</option>
+        </select>
+      </div>
 
-        <div class="scanner-active-container" [style.display]="isScanning() ? 'block' : 'none'">
-          <video id="video-preview" playsinline style="width: 100%; object-fit: cover; border-radius: 8px; background: #000; min-height: 250px;"></video>
-          <div style="font-size: 0.75rem; color: #666; margin-top: 0.5rem; text-align: center;">
-            {{ debugMessage() }}
-          </div>
-          
-          <div class="scan-result" *ngIf="scanResult()">
-            <h4>Resultado:</h4>
-            <p class="scanned-text">{{ scanResult() }}</p>
-            <button class="scan-btn secondary" (click)="startScanning()" style="margin-top: 1rem">Escanear otro</button>
-          </div>
+      <!-- Loading -->
+      <div class="mob-loading" *ngIf="cargandoActivos()">
+        <div class="mob-skeleton" *ngFor="let _ of [1,2,3,4,5]"></div>
+      </div>
 
-          <button *ngIf="isScanning() && !scanResult()" class="logout-btn" style="width: 100%; text-align: center; margin-top: 1rem; padding: 1rem; background: var(--gray-100); border-radius: 8px;" (click)="stopScanning()">Cancelar</button>
+      <!-- List -->
+      <ng-container *ngIf="!cargandoActivos()">
+        <div class="mob-card" *ngFor="let item of dataActivos()" (click)="verDetalle(item)">
+          <div class="mob-card-top">
+            <div class="mob-card-info">
+              <span class="mob-card-id">{{ item.idActivo }}</span>
+              <strong class="mob-card-name">{{ item.nombre }}</strong>
+              <span class="mob-card-desc">{{ item.descripcion }}</span>
+            </div>
+            <div class="mob-card-right">
+              <span class="mob-badge-status" [class.active]="item.estado === '1'" [class.inactive]="item.estado === '2'">{{ item.estado === '1' ? 'Activo' : 'Inactivo' }}</span>
+              <span class="mob-card-price">${{ item.precio }}</span>
+            </div>
+          </div>
+          <div class="mob-card-actions" (click)="$event.stopPropagation()">
+            <button class="mob-chip" (click)="verDetalle(item)">Ver</button>
+            <button class="mob-chip edit" *ngIf="miRol === 1 || miRol === 2" (click)="openEditForm(item)">Editar</button>
+            <button class="mob-chip danger" *ngIf="item.estado === '1' && miRol === 1" (click)="cambiarEstadoActivo(item, '2')">Desactivar</button>
+            <button class="mob-chip success" *ngIf="item.estado === '2' && miRol === 1" (click)="cambiarEstadoActivo(item, '1')">Activar</button>
+            <button class="mob-chip danger" *ngIf="item.estado === '2' && miRol === 1" (click)="eliminarActivo(item)">Eliminar</button>
+            <!-- Editor -->
+            <button class="mob-chip danger" *ngIf="item.estado === '1' && miRol === 2" (click)="cambiarEstadoActivo(item, '2')">Desactivar</button>
+            <button class="mob-chip success" *ngIf="item.estado === '2' && miRol === 2" (click)="cambiarEstadoActivo(item, '1')">Activar</button>
+            <button class="mob-chip danger" *ngIf="item.estado === '2' && miRol === 2" (click)="eliminarActivo(item)">Eliminar</button>
+          </div>
         </div>
+        <div class="mob-empty" *ngIf="dataActivos().length === 0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
+          <span>Sin resultados</span>
+        </div>
+      </ng-container>
+    </section>
 
-        <!-- Formulario Crear Activo -->
-        <div class="mobile-form-container" *ngIf="showCreateForm">
-          <div class="form-header">
-            <h3>Registrar Activo</h3>
-            <button class="close-btn" (click)="closeCreateForm()">✕</button>
-          </div>
-          
-          <div class="form-group">
-            <label>No. Activo</label>
-            <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003">
-          </div>
-          <div class="form-group">
-            <label>Nombre</label>
-            <input type="text" [(ngModel)]="newActivo.nombre">
-          </div>
-          <div class="form-group">
-            <label>Descripción</label>
-            <input type="text" [(ngModel)]="newActivo.descripcion">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Precio</label>
-              <input type="number" [(ngModel)]="newActivo.precio">
-            </div>
-            <div class="form-group">
-              <label>Existencias</label>
-              <input type="number" [(ngModel)]="newActivo.existencias">
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Garantía</label>
-            <input type="text" [(ngModel)]="newActivo.garantia">
-          </div>
-          <div class="form-group">
-            <label>No. Serie</label>
-            <input type="text" [(ngModel)]="newActivo.nSerie">
-          </div>
-          
-          <!-- Selects de foráneas -->
-          <div class="form-group">
-            <label>Marca</label>
-            <select [(ngModel)]="newActivo.fkMarca">
-              <option *ngFor="let m of listMarcas" [value]="m.idMarca">{{ m.nombre }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Proveedor</label>
-            <select [(ngModel)]="newActivo.fkProvedor">
-              <option *ngFor="let p of listProveedores" [value]="p.idProvedor">{{ p.nombre }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Línea</label>
-            <select [(ngModel)]="newActivo.fkLinea">
-              <option *ngFor="let l of listLineas" [value]="l.idLinea">{{ l.nombre }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Presentación</label>
-            <select [(ngModel)]="newActivo.fkPresentacion">
-              <option *ngFor="let pr of listPresentacion" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
-            </select>
-          </div>
+    <!-- ========== TAB: CAMBIOS (Admin) ========== -->
+    <section class="mob-tab" *ngIf="activeTab() === 'cambios' && miRol === 1">
+      <div class="mob-inv-header">
+        <select class="mob-filter-chip" [(ngModel)]="filtroCambios" (change)="onFiltroCambiosChange()">
+          <option value="pendientes">Pendientes</option>
+          <option value="procesados">Procesados</option>
+        </select>
+        <span class="mob-pending-badge" *ngIf="filtroCambios === 'pendientes' && cantidadPendientes() > 0">{{ cantidadPendientes() }} pend.</span>
+      </div>
 
-          <!-- Asignación -->
-          <div class="form-group full-width" style="border-top: 1px dashed var(--border-color); padding-top: 1rem; margin-top: 0.5rem;">
-            <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--gray-800);">Asignación</h3>
-          </div>
-          <div class="form-group">
-            <label>Área</label>
-            <select [(ngModel)]="newActivo.fkArea">
-              <option *ngFor="let a of listAreas" [value]="a.idArea">{{ a.nombre }}</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Resguardante</label>
-            <select [(ngModel)]="newActivo.fkResguardante">
-              <option *ngFor="let r of listResguardantes" [value]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
-            </select>
-          </div>
-          <div class="form-group full-width" style="border-top: 1px dashed var(--border-color); padding-top: 1rem; margin-top: 0.5rem;"></div>
-          <div class="form-group photo-section">
-            <label>Fotografía del Activo</label>
-            <div class="photo-buttons">
-              <label class="photo-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                Tomar Foto
-                <input type="file" accept="image/*" capture="environment" (change)="onFileSelected($event)" style="display: none;">
-              </label>
-              <label class="photo-btn outline">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                Importar
-                <input type="file" accept="image/*" (change)="onFileSelected($event)" style="display: none;">
-              </label>
-            </div>
-            <div *ngIf="selectedFile" class="file-status">
-              ✓ Archivo: {{ selectedFile.name }}
-            </div>
-          </div>
+      <!-- Loading -->
+      <div class="mob-loading" *ngIf="cargandoCambios()">
+        <div class="mob-skeleton" *ngFor="let _ of [1,2,3,4]"></div>
+      </div>
 
-          <button class="scan-btn" (click)="saveNuevoActivo()" [disabled]="isSaving" style="margin-top: 1.5rem;">
-            {{ isSaving ? 'Guardando...' : 'Guardar Producto' }}
+      <!-- Pendientes -->
+      <ng-container *ngIf="filtroCambios === 'pendientes' && !cargandoCambios()">
+        <div class="mob-card cambio-card" *ngFor="let c of dataCambios()" (click)="verDetalleCambio(c)">
+          <div class="mob-card-top">
+            <div class="mob-card-info">
+              <span class="mob-cambio-tipo" [class.crear]="c.tipoCambio === 'CREAR'" [class.editar]="c.tipoCambio === 'ACTUALIZAR'" [class.eliminar]="c.tipoCambio === 'ELIMINAR'">{{ c.tipoCambio }}</span>
+              <strong class="mob-card-name">{{ c.tipoCambio === 'CREAR' ? 'Nuevo activo' : c.idEntidad }}</strong>
+              <span class="mob-card-desc">{{ getDatosResumen(c.datosJson) }}</span>
+            </div>
+            <div class="mob-card-right">
+              <span class="mob-card-price">{{ c.creadoEn | date:'dd/MM HH:mm' }}</span>
+            </div>
+          </div>
+          <div class="mob-card-actions" (click)="$event.stopPropagation()">
+            <button class="mob-chip" (click)="verDetalleCambio(c)">Revisar</button>
+          </div>
+        </div>
+        <div class="mob-empty" *ngIf="dataCambios().length === 0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Sin cambios pendientes</span>
+        </div>
+      </ng-container>
+
+      <!-- Procesados -->
+      <ng-container *ngIf="filtroCambios === 'procesados' && !cargandoCambios()">
+        <div class="mob-card cambio-card" *ngFor="let c of dataProcesados()" (click)="verDetalleCambio(c)">
+          <div class="mob-card-top">
+            <div class="mob-card-info">
+              <span class="mob-cambio-tipo" [class.crear]="c.tipoCambio === 'CREAR'" [class.editar]="c.tipoCambio === 'ACTUALIZAR'" [class.eliminar]="c.tipoCambio === 'ELIMINAR'">{{ c.tipoCambio }}</span>
+              <strong class="mob-card-name">{{ c.tipoCambio === 'CREAR' ? 'Nuevo activo' : c.idEntidad }}</strong>
+              <span class="mob-card-desc">{{ getDatosResumen(c.datosJson) }}</span>
+            </div>
+            <div class="mob-card-right">
+              <span class="mob-badge-status" [class.active]="c.estado === 'APROBADO'" [class.inactive]="c.estado === 'RECHAZADO'">{{ c.estado === 'APROBADO' ? 'Aprobado' : 'Rechazado' }}</span>
+            </div>
+          </div>
+          <div class="mob-card-actions" (click)="$event.stopPropagation()">
+            <button class="mob-chip" (click)="verDetalleCambio(c)">Ver</button>
+          </div>
+        </div>
+        <div class="mob-empty" *ngIf="dataProcesados().length === 0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <span>Sin cambios procesados</span>
+        </div>
+      </ng-container>
+    </section>
+
+    <!-- ========== TAB: PERFIL ========== -->
+    <section class="mob-tab" *ngIf="activeTab() === 'perfil'">
+      <div class="mob-profile-card">
+        <div class="mob-avatar">{{ userName().charAt(0).toUpperCase() }}</div>
+        <h3>{{ userName() }}</h3>
+        <span class="mob-profile-rol">{{ miRol === 1 ? 'Administrador' : miRol === 2 ? 'Editor' : 'Observador' }}</span>
+      </div>
+      <div class="mob-profile-actions">
+        <button class="mob-btn mob-btn-full mob-btn-danger" (click)="logout()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </section>
+  </main>
+
+  <!-- BOTTOM NAV -->
+  <nav class="mob-nav">
+    <button class="mob-nav-item" [class.active]="activeTab() === 'inicio'" (click)="setTab('inicio')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span>Inicio</span>
+    </button>
+    <button class="mob-nav-item" [class.active]="activeTab() === 'inventario'" (click)="setTab('inventario')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Inventario</span>
+    </button>
+    <button class="mob-nav-item" *ngIf="miRol === 1" [class.active]="activeTab() === 'cambios'" (click)="setTab('cambios')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      <span>Cambios</span>
+      <span class="mob-nav-badge" *ngIf="cantidadPendientes() > 0">{{ cantidadPendientes() }}</span>
+    </button>
+    <button class="mob-nav-item" [class.active]="activeTab() === 'perfil'" (click)="setTab('perfil')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span>Perfil</span>
+    </button>
+  </nav>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Detail Modal -->
+  <div class="mob-overlay" *ngIf="showDetail" (click)="showDetail = false">
+    <div class="mob-modal" (click)="$event.stopPropagation()">
+      <div class="mob-modal-header">
+        <h2>{{ selectedActivo?.idActivo }}</h2>
+        <button class="mob-modal-close" (click)="showDetail = false">✕</button>
+      </div>
+      <div class="mob-modal-body">
+        <div class="mob-detail-row"><span class="mob-dl">Nombre</span><span class="mob-dv">{{ selectedActivo?.nombre }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Descripción</span><span class="mob-dv">{{ selectedActivo?.descripcion }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Precio</span><span class="mob-dv">${{ selectedActivo?.precio }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">No. Serie</span><span class="mob-dv">{{ selectedActivo?.nSerie || 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Garantía</span><span class="mob-dv">{{ selectedActivo?.garantia || 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Marca</span><span class="mob-dv">{{ getMarcaName(selectedActivo?.fkMarca) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Proveedor</span><span class="mob-dv">{{ getProveedorName(selectedActivo?.fkProvedor) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Línea</span><span class="mob-dv">{{ getLineaName(selectedActivo?.fkLinea) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Presentación</span><span class="mob-dv">{{ getPresentacionName(selectedActivo?.fkPresentacion) }}</span></div>
+        <div class="mob-detail-divider">Asignación</div>
+        <div class="mob-detail-row"><span class="mob-dl">Área</span><span class="mob-dv">{{ detailAsignacion() ? getAreaName(detailAsignacion()?.fkArea) : 'No asignado' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Resguardante</span><span class="mob-dv">{{ detailAsignacion() ? getResguardanteName(detailAsignacion()?.fkResguardante) : 'No asignado' }}</span></div>
+        <div class="mob-detail-divider">Fotos ({{ detailFotos().length }})</div>
+        <div class="mob-photo-gallery" *ngIf="detailFotos().length">
+          <img *ngFor="let f of detailFotos()" [src]="'/fotos/view/' + f.foto" (click)="openImagePreview('/fotos/view/' + f.foto)" class="mob-thumb" />
+        </div>
+        <div class="mob-empty-sm" *ngIf="!detailFotos().length">Sin fotos</div>
+        <div class="mob-modal-actions">
+          <button class="mob-btn mob-btn-outline" *ngIf="miRol === 1 || miRol === 2" (click)="openEditForm(selectedActivo!)">Editar</button>
+          <button class="mob-btn" (click)="showDetail = false">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Form Modal -->
+  <div class="mob-overlay" *ngIf="showCreateForm" (click)="closeCreateForm()">
+    <div class="mob-modal" (click)="$event.stopPropagation()">
+      <div class="mob-modal-header">
+        <h2>Nuevo Activo</h2>
+        <button class="mob-modal-close" (click)="closeCreateForm()">✕</button>
+      </div>
+      <div class="mob-modal-body">
+        <div class="mob-form-group">
+          <label>No. Activo *</label>
+          <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="newActivo.nombre" placeholder="Nombre del activo" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Descripción *</label>
+          <input type="text" [(ngModel)]="newActivo.descripcion" placeholder="Descripción" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Precio *</label>
+          <input type="number" min="0" [(ngModel)]="newActivo.precio" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>No. Serie *</label>
+          <input type="text" [(ngModel)]="newActivo.nSerie" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Garantía *</label>
+          <input type="text" [(ngModel)]="newActivo.garantia" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Marca *</label>
+            <select [(ngModel)]="newActivo.fkMarca" class="mob-input">
+              <option *ngFor="let m of listMarcas()" [value]="m.idMarca">{{ m.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Proveedor *</label>
+          <select [(ngModel)]="newActivo.fkProvedor" class="mob-input">            <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Línea *</label>
+          <select [(ngModel)]="newActivo.fkLinea" class="mob-input">            <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Presentación *</label>
+          <select [(ngModel)]="newActivo.fkPresentacion" class="mob-input">            <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-detail-divider">Asignación</div>
+        <div class="mob-form-group">
+          <label>Área</label>
+          <select [(ngModel)]="newActivo.fkArea" class="mob-input">            <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Resguardante</label>
+          <select [(ngModel)]="newActivo.fkResguardante" class="mob-input">            <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Fotos</label>
+          <div class="mob-file-btns">
+            <label class="mob-file-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Cámara
+              <input type="file" accept="image/*" capture="environment" (change)="onFilesSelected($event)" multiple hidden />
+            </label>
+            <label class="mob-file-btn mob-file-btn-outline">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Galería
+              <input type="file" accept="image/*" (change)="onFilesSelected($event)" multiple hidden />
+            </label>
+          </div>
+          <div class="mob-file-count" *ngIf="selectedFiles.length">{{ selectedFiles.length }} archivo(s)</div>
+        </div>
+        <div class="mob-modal-actions">
+          <button class="mob-btn mob-btn-danger-outline" (click)="closeCreateForm()" [disabled]="isSaving">Cancelar</button>
+          <button class="mob-btn mob-btn-success-outline" (click)="saveNuevoActivo()" [disabled]="isSaving">
+            {{ isSaving ? (saveStep() || 'Guardando...') : 'Guardar' }}
           </button>
         </div>
-      </main>
-
-      <nav class="mobile-nav">
-        <a href="javascript:void(0)" class="nav-item active">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-          <span>Inicio</span>
-        </a>
-      </nav>
+      </div>
     </div>
+  </div>
+
+  <!-- Edit Form Modal -->
+  <div class="mob-overlay" *ngIf="showEditForm" (click)="closeEditForm()">
+    <div class="mob-modal" (click)="$event.stopPropagation()">
+      <div class="mob-modal-header">
+        <h2>Editar: {{ editActivoForm.idActivo }}</h2>
+        <button class="mob-modal-close" (click)="closeEditForm()">✕</button>
+      </div>
+      <div class="mob-modal-body">
+        <div class="mob-form-group">
+          <label>Nombre *</label>
+          <input type="text" [(ngModel)]="editActivoForm.nombre" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Descripción *</label>
+          <input type="text" [(ngModel)]="editActivoForm.descripcion" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Precio *</label>
+          <input type="number" min="0" [(ngModel)]="editActivoForm.precio" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>No. Serie *</label>
+          <input type="text" [(ngModel)]="editActivoForm.nSerie" class="mob-input" />
+        </div>
+        <div class="mob-form-group">
+          <label>Marca *</label>
+          <select [(ngModel)]="editActivoForm.fkMarca" class="mob-input">
+            <option *ngFor="let m of listMarcas()" [value]="m.idMarca">{{ m.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Proveedor *</label>
+          <select [(ngModel)]="editActivoForm.fkProvedor" class="mob-input">
+            <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Línea *</label>
+          <select [(ngModel)]="editActivoForm.fkLinea" class="mob-input">
+            <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Presentación *</label>
+          <select [(ngModel)]="editActivoForm.fkPresentacion" class="mob-input">
+            <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Área</label>
+          <select [(ngModel)]="editActivoForm.fkArea" class="mob-input">            <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.nombre }}</option>
+          </select>
+        </div>
+        <div class="mob-form-group">
+          <label>Resguardante</label>
+          <select [(ngModel)]="editActivoForm.fkResguardante" class="mob-input">            <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
+          </select>
+        </div>
+        <div class="mob-detail-divider">Fotos actuales</div>
+        <div class="mob-photo-gallery" *ngIf="editFotos().length">
+          <div class="mob-thumb-wrap" *ngFor="let f of editFotos()">
+            <img [src]="'/fotos/view/' + f.foto" (click)="openImagePreview('/fotos/view/' + f.foto)" class="mob-thumb" />
+            <button class="mob-thumb-del" *ngIf="miRol === 1 || miRol === 2" (click)="deleteEditFoto(f.idFoto!)">✕</button>
+          </div>
+        </div>
+        <div class="mob-empty-sm" *ngIf="!editFotos().length">Sin fotos</div>
+        <div class="mob-form-group" style="margin-top:0.75rem">
+          <label>Agregar fotos</label>
+          <div class="mob-file-btns">
+            <label class="mob-file-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+              Cámara
+              <input type="file" accept="image/*" capture="environment" (change)="onFilesSelected($event)" multiple hidden />
+            </label>
+            <label class="mob-file-btn mob-file-btn-outline">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Galería
+              <input type="file" accept="image/*" (change)="onFilesSelected($event)" multiple hidden />
+            </label>
+          </div>
+          <div class="mob-file-count" *ngIf="selectedFiles.length">{{ selectedFiles.length }} archivo(s)</div>
+        </div>
+        <div class="mob-modal-actions">
+          <button class="mob-btn mob-btn-danger-outline" (click)="closeEditForm()" [disabled]="isSaving">Cancelar</button>
+          <button class="mob-btn mob-btn-success-outline" (click)="saveEditActivo()" [disabled]="isSaving">
+            {{ isSaving ? 'Guardando...' : 'Guardar' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Review Cambio Modal -->
+  <div class="mob-overlay" *ngIf="cambioSeleccionado" (click)="cerrarModalCambio()">
+    <div class="mob-modal" (click)="$event.stopPropagation()">
+      <div class="mob-modal-header">
+        <h2>Revision de Cambio ({{ cambioSeleccionado.tipoCambio }})</h2>
+        <button class="mob-modal-close" (click)="cerrarModalCambio()">✕</button>
+      </div>
+      <div class="mob-modal-body">
+        <div class="mob-cambio-meta">
+          <span class="mob-cambio-tipo" [class.crear]="cambioSeleccionado.tipoCambio === 'CREAR'" [class.editar]="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" [class.eliminar]="cambioSeleccionado.tipoCambio === 'ELIMINAR'">{{ cambioSeleccionado.tipoCambio }}</span>
+          <span class="mob-cambio-meta-item"><strong>ID:</strong> {{ cambioSeleccionado.idEntidad || 'Nuevo' }}</span>
+          <span class="mob-cambio-meta-item"><strong>Solicitante ID:</strong> {{ cambioSeleccionado.idSolicitante }}</span>
+          <span *ngIf="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" class="mob-cambio-meta-item" [ngStyle]="{'color': datosJsonParseado?.estado === '3' ? '#dc2626' : (datosJsonParseado?.estado === '2' ? '#d97706' : '#059669')}">
+            <strong>Nuevo estado:</strong> {{ datosJsonParseado?.estado === '3' ? 'Eliminado' : (datosJsonParseado?.estado === '2' ? 'Inactivo' : (datosJsonParseado?.estado === '1' ? 'Activo' : 'N/A')) }}
+          </span>
+          <span *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" class="mob-badge-status" [class.active]="cambioSeleccionado.estado === 'APROBADO'" [class.inactive]="cambioSeleccionado.estado === 'RECHAZADO'" style="margin-left:auto">{{ cambioSeleccionado.estado === 'APROBADO' ? 'Aprobado' : 'Rechazado' }}</span>
+        </div>
+        <div *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" class="mob-cambio-resultado">
+          <span><strong>Revisor ID:</strong> {{ cambioSeleccionado.idRevisor || '-' }}</span>
+          <span><strong>Fecha:</strong> {{ cambioSeleccionado.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
+          <span *ngIf="cambioSeleccionado.comentario"><strong>Comentario:</strong> {{ cambioSeleccionado.comentario }}</span>
+        </div>
+
+        <div *ngIf="resumenCambiosTexto()" class="mob-cambio-resumen">
+          {{ resumenCambiosTexto() }}
+        </div>
+
+        <div class="mob-detail-divider">Datos del activo</div>
+        <div class="mob-detail-row"><span class="mob-dl">Nombre *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.nombre, 'nombre')">{{ datosJsonParseado?.nombre || 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Precio *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.precio, 'precio')">{{ datosJsonParseado?.precio != null ? '$' + datosJsonParseado.precio : 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Descripción *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.descripcion, 'descripcion')">{{ datosJsonParseado?.descripcion || 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">No. Serie *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.nSerie, 'nSerie')">{{ datosJsonParseado?.nSerie || 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Garantía *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.garantia, 'garantia')">{{ datosJsonParseado?.garantia || 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Existencias</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.existencias, 'existencias')">{{ datosJsonParseado?.existencias ?? 'N/A' }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Marca *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.fkMarca, 'fkMarca')">{{ getMarcaName(datosJsonParseado?.fkMarca) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Proveedor *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.fkProvedor, 'fkProvedor')">{{ getProveedorName(datosJsonParseado?.fkProvedor) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Línea *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.fkLinea, 'fkLinea')">{{ getLineaName(datosJsonParseado?.fkLinea) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Presentación *</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.fkPresentacion, 'fkPresentacion')">{{ getPresentacionName(datosJsonParseado?.fkPresentacion) }}</span></div>
+        <div class="mob-detail-divider">Asignación</div>
+        <div class="mob-detail-row"><span class="mob-dl">Área</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.fkArea, 'fkArea')">{{ getAreaName(datosJsonParseado?.fkArea) }}</span></div>
+        <div class="mob-detail-row"><span class="mob-dl">Resguardante</span><span class="mob-dv" [ngStyle]="campoCambiado(datosJsonParseado?.fkResguardante, 'fkResguardante')">{{ getResguardanteName(datosJsonParseado?.fkResguardante) }}</span></div>
+
+        <div class="mob-detail-divider">Gestion de Fotos</div>
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem;margin-bottom:0.5rem;background:#fafafa" *ngIf="cambioSeleccionado.tipoCambio !== 'CREAR'">
+          <strong style="color:#059669;font-size:0.8rem">1. Se mantienen ({{ fotosActualesCambio().length }})</strong>
+          <div class="mob-photo-gallery" *ngIf="fotosActualesCambio().length" style="margin-top:0.5rem">
+            <img *ngFor="let f of fotosActualesCambio()" [src]="'/fotos/view/' + f.foto" (click)="openImagePreview('/fotos/view/' + f.foto)" class="mob-thumb" style="border-color:#059669" />
+          </div>
+          <div *ngIf="!fotosActualesCambio().length" style="color:#a3a3a3;font-size:0.75rem;margin-top:0.25rem">Sin fotos actuales.</div>
+        </div>
+        <div style="border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem;margin-bottom:0.5rem;background:#ecfdf5" *ngIf="datosJsonParseado?._fotosFilenames?.length">
+          <strong style="color:#2563eb;font-size:0.8rem">2. Se agregan ({{ datosJsonParseado._fotosFilenames.length }})</strong>
+          <div class="mob-photo-gallery" style="margin-top:0.5rem">
+            <img *ngFor="let f of datosJsonParseado._fotosFilenames" [src]="'/fotos/view/' + f" (click)="openImagePreview('/fotos/view/' + f)" class="mob-thumb" style="border-color:#2563eb" />
+          </div>
+        </div>
+        <div style="border:1px solid #fecaca;border-radius:10px;padding:0.75rem;margin-bottom:0.5rem;background:#fef2f2" *ngIf="datosJsonParseado?._fotosEliminadas?.length">
+          <strong style="color:#dc2626;font-size:0.8rem">3. Se eliminan ({{ datosJsonParseado._fotosEliminadas.length }})</strong>
+          <div class="mob-photo-gallery" style="margin-top:0.5rem">
+            <ng-container *ngFor="let idElim of datosJsonParseado._fotosEliminadas">
+              <ng-container *ngFor="let f of fotosActualesCambio()">
+                <div *ngIf="f.idFoto === idElim" style="position:relative">
+                  <img [src]="'/fotos/view/' + f.foto" class="mob-thumb" style="border-color:#dc2626;opacity:0.5" />
+                  <span style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#dc2626;font-size:1.2rem;font-weight:700">✕</span>
+                </div>
+              </ng-container>
+            </ng-container>
+          </div>
+        </div>
+        <div *ngIf="!datosJsonParseado?._fotosFilenames?.length && !datosJsonParseado?._fotosEliminadas?.length && cambioSeleccionado.tipoCambio === 'CREAR'" style="color:#a3a3a3;font-size:0.75rem">Sin fotos.</div>
+
+        <div class="mob-form-group" *ngIf="mostrandoTextarea" style="margin-top:0.5rem">
+          <label style="color:#dc2626">Motivo del rechazo</label>
+          <textarea [(ngModel)]="comentarioRechazo" class="mob-input" style="min-height:80px;resize:vertical" placeholder="Explica por que se rechaza..."></textarea>
+        </div>
+
+        <div class="mob-modal-actions">
+          <ng-container *ngIf="cambioSeleccionado.estado === 'PENDIENTE'">
+            <button class="mob-btn mob-btn-outline" (click)="cerrarModalCambio()">Cancelar</button>
+            <button class="mob-btn mob-btn-danger-outline" (click)="iniciarRechazo()">{{ mostrandoTextarea ? 'Confirmar rechazo' : 'Rechazar' }}</button>
+            <button class="mob-btn mob-btn-success-outline" (click)="aprobarCambio()">Aceptar</button>
+          </ng-container>
+          <ng-container *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'">
+            <button class="mob-btn mob-btn-outline" (click)="cerrarModalCambio()">Cerrar</button>
+          </ng-container>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Image Preview Modal -->
+  <div class="mob-overlay mob-overlay-dark" *ngIf="showImagePreview" (click)="showImagePreview = false">
+    <button class="mob-modal-close mob-modal-close-light" (click)="showImagePreview = false">✕</button>
+    <img [src]="previewImageUrl" class="mob-preview-img" (click)="$event.stopPropagation()" />
+  </div>
+</div>

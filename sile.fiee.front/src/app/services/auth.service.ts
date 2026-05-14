@@ -26,6 +26,10 @@ export class AuthService {
     localStorage.setItem('token', response.token);
     if(response.fkRol) localStorage.setItem('fkRol', response.fkRol.toString());
     if(response.idUsuario) localStorage.setItem('idUsuario', response.idUsuario.toString());
+    if(response.nombre) {
+      localStorage.setItem('userName', response.nombre);
+      if(response.apellido) localStorage.setItem('userFullName', response.nombre + ' ' + response.apellido);
+    }
   }
 
 
@@ -48,6 +52,8 @@ export class AuthService {
     localStorage.removeItem('token');
     localStorage.removeItem('fkRol');
     localStorage.removeItem('idUsuario');
+    localStorage.removeItem('userName');
+    localStorage.removeItem('userFullName');
   }
 
 

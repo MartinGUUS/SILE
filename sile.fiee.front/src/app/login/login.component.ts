@@ -67,7 +67,6 @@ export class LoginComponent {
 
   loginForm: FormGroup;
   
-  // Utilizando Signals para asegurar update asíncrono
   isLoading = signal(false);
   errorMessage = signal('');
 
@@ -87,7 +86,6 @@ export class LoginComponent {
         next: (response) => {
           if (response && response.token) {
             this.authService.saveSession(response);
-            // Redirigir dinámicamente dependiendo del tamaño de pantalla
             if (window.innerWidth < 768) {
               this.router.navigate(['/dashboard/mobile']);
             } else {

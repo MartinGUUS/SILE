@@ -227,57 +227,6 @@ VALUES (
         'Electrónica Global Monterrey'
     );
 
--- 7. Los Activos (Productos)
-INSERT IGNORE INTO
-    activos (
-        no_activo,
-        nombre,
-        descripcion,
-        precio,
-        existencias,
-        garantia,
-        n_serie,
-        fk_provedor,
-        fk_marca,
-        fk_linea,
-        fk_presentacion,
-        creado_por,
-        ultimo_actualizado_por
-    )
-VALUES (
-        'ACT-10001',
-        'Computadora Optiplex 7000',
-        'PC i7 16GB RAM 512GB SSD',
-        18500.00,
-        15,
-        '12 Meses',
-        'SN-DELL-88223',
-        'PRV-001',
-        'M-DELL',
-        'L-COMP',
-        'P-CAJA',
-        1,
-        1
-    ),
-    (
-        'ACT-10002',
-        'Multímetro Fluke 87V',
-        'Multímetro digital industrial RMS',
-        8500.00,
-        4,
-        '36 Meses',
-        'SN-FL-9911X',
-        'PRV-002',
-        'M-FLUKE',
-        'L-ELEC',
-        'P-UNID',
-        1,
-        1
-    );
-
--- ==========================================
--- TAREA 1: FLUJO DE APROBACIÓN PARA EDITOR
--- ==========================================
 INSERT IGNORE INTO
     roles (
         id_rol,

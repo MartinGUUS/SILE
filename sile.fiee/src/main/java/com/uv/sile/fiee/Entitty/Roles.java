@@ -2,6 +2,8 @@ package com.uv.sile.fiee.Entitty;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
@@ -11,8 +13,9 @@ import java.time.LocalDateTime;
 public class Roles {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_rol")
-    private String idRol;
+    private Integer idRol;
 
     @Column(name = "nombre")
     private String nombre;
@@ -23,18 +26,17 @@ public class Roles {
     @Column(name = "estado")
     private String estado;
 
-    @Column(name = "creado_en")
+    @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
 
-    @Column(name = "actualizado_en")
+    @Column(name = "actualizado_en", insertable = false, updatable = false)
     private LocalDateTime actualizadoEn;
 
-    // Getters y Setters
-    public String getIdRol() {
+    public Integer getIdRol() {
         return idRol;
     }
 
-    public void setIdRol(String idRol) {
+    public void setIdRol(Integer idRol) {
         this.idRol = idRol;
     }
 

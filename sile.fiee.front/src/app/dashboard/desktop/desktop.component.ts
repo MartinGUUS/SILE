@@ -50,6 +50,7 @@ export class DesktopDashboardComponent implements OnInit {
 
   miId: number | null = null;
   miRol: number | null = null;
+  userName = signal('');
   cantidadPendientes: number = 0;
   cargandoCambios = false;
   cargandoSolicitudes = false;
@@ -100,8 +101,15 @@ export class DesktopDashboardComponent implements OnInit {
   // Filtro estado activos (1=activos, 2=inactivos)
   filtroEstadoActivos = '1';
 
+  // Búsqueda de activos
+  searchQuery = '';
+  allActivos: Activo[] = [];
+
   // Filtro estado catálogos (1=activos, 2=inactivos) - Por defecto en activos (1)
-  filtroEstadoCatalogo = '1';
+  filtroEstadoCatalogo: Record<string, string> = {};
+
+  // Filtro estado usuarios (1=activos, 2=inactivos)
+  filtroEstadoUsuarios = '1';
 
   // Modal Detalle
   showModalDetalle = false;
@@ -116,6 +124,7 @@ export class DesktopDashboardComponent implements OnInit {
   ngOnInit() {
     this.miId = this.authService.getIdUsuario();
     this.miRol = this.authService.getFkRol();
+    this.userName.set(localStorage.getItem('userFullName') || localStorage.getItem('userName') || 'Usuario');
     this.loadDataForTab();
     
     if (this.miRol === 1) {
@@ -142,20 +151,20 @@ export class DesktopDashboardComponent implements OnInit {
     });
   }
 
-  notifMensaje = '';
-  notifError = false;
+  notifMensaje = signal('');
+  notifError = signal(false);
   notifTimeout: any;
 
   mostrarNotificacion(mensaje: string, esError: boolean = false): void {
     if (this.notifTimeout) clearTimeout(this.notifTimeout);
-    this.notifMensaje = mensaje;
-    this.notifError = esError;
-    this.notifTimeout = setTimeout(() => { this.notifMensaje = ''; this.notifTimeout = null; }, 5000);
+    this.notifMensaje.set(mensaje);
+    this.notifError.set(esError);
+    this.notifTimeout = setTimeout(() => { this.notifMensaje.set(''); this.notifTimeout = null; }, 2000);
   }
 
   cerrarNotificacion(): void {
     if (this.notifTimeout) clearTimeout(this.notifTimeout);
-    this.notifMensaje = '';
+    this.notifMensaje.set('');
     this.notifTimeout = null;
   }
 
@@ -223,19 +232,22 @@ export class DesktopDashboardComponent implements OnInit {
     if (tab === 'usuarios') {
       if (this.miRol === 1) {
         this.usuariosService.getAllUsuarios().subscribe({
-          next: d => this.dataUsuarios.set(d),
+          next: d => this.dataUsuarios.set(d.filter(u => u.estado === this.filtroEstadoUsuarios)),
           error: console.error
         });
       }
     } else if (tab === 'activos') {
-      // Carga activos según el filtro de estado seleccionado
       this.catalogoService.getAll('activos', this.filtroEstadoActivos).subscribe({
-        next: d => this.dataActivos.set(d),
+        next: d => {
+          this.allActivos = d;
+          this.applySearch();
+        },
         error: console.error
       });
     } else if (this.isCatalogoTab(tab)) {
-      console.log(`[CATALOGO] Cargando: ${tab} | Filtro Estado: ${this.filtroEstadoCatalogo}`);
-      this.catalogoService.getAll(tab, this.filtroEstadoCatalogo).subscribe({
+      const estado = this.filtroEstadoCatalogo[tab] || '1';
+      console.log(`[CATALOGO] Cargando: ${tab} | Filtro Estado: ${estado}`);
+      this.catalogoService.getAll(tab, estado).subscribe({
         next: d => {
           console.log(`[CATALOGO] ${tab} recibidos:`, d);
           this.dataCatalogo.set(d);
@@ -278,15 +290,41 @@ export class DesktopDashboardComponent implements OnInit {
     this.loadDataForTab();
   }
 
-  onFiltroActivosChange() {
+  onFiltroUsuariosChange() {
     this.loadDataForTab();
   }
 
+  onFiltroActivosChange() {
+    this.searchQuery = '';
+    this.loadDataForTab();
+  }
+
+  onSearchChange() {
+    this.applySearch();
+  }
+
+  applySearch() {
+    const q = this.searchQuery.toLowerCase().trim();
+    if (!q) {
+      this.dataActivos.set(this.allActivos);
+    } else {
+      this.dataActivos.set(this.allActivos.filter(a =>
+        (a.idActivo && a.idActivo.toLowerCase().includes(q)) ||
+        (a.nombre && a.nombre.toLowerCase().includes(q)) ||
+        (a.descripcion && a.descripcion.toLowerCase().includes(q)) ||
+        (a.nSerie && a.nSerie.toLowerCase().includes(q))
+      ));
+    }
+  }
+
   eliminarUsuario(id: number) {
-    if (!confirm('¿Eliminar este usuario? Esta acción es permanente (borrado lógico).')) return;
+    if (!confirm('Eliminar este usuario? Esta accion es permanente (borrado logico).')) return;
     this.usuariosService.cambiarEstado(id, '3').subscribe({
-      next: () => this.loadDataForTab(),
-      error: console.error
+      next: () => {
+        this.loadDataForTab();
+        this.mostrarNotificacion('Usuario eliminado');
+      },
+      error: () => this.mostrarNotificacion('Error al eliminar.', true)
     });
   }
 
@@ -304,10 +342,10 @@ export class DesktopDashboardComponent implements OnInit {
       
       this.cambiosService.enviarCambio(cambio).subscribe({
         next: () => {
-          this.mostrarNotificacion('Cambio enviado a revisión. Un administrador lo evaluará.');
+          this.mostrarNotificacion('Solicitud enviada a revision. Un administrador la evaluara.');
           this.loadDataForTab();
         },
-        error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+        error: () => this.mostrarNotificacion('Error al enviar solicitud.', true)
       });
       return;
     }
@@ -444,7 +482,7 @@ export class DesktopDashboardComponent implements OnInit {
   // --- CREAR ACTIVO ---
   openCreateActivo() {
     this.newActivo = {
-      idActivo: '', nombre: '', descripcion: '', precio: 0, existencias: 1, 
+      idActivo: '', nombre: '', descripcion: '', precio: undefined, existencias: 1, 
       garantia: '', nSerie: '', fkMarca: '', fkProvedor: '', fkLinea: '', fkPresentacion: '',
       fkArea: '', fkResguardante: ''
     };
@@ -582,6 +620,11 @@ export class DesktopDashboardComponent implements OnInit {
     });
   }
 
+  deleteEditFoto(idFoto: number) {
+    this.fotosActivo.update(fotos => fotos.filter(f => f.idFoto !== idFoto));
+    this.fotosAEliminar.push(idFoto);
+  }
+
   // --- EDITAR ACTIVO (MODAL) ---
   openEditActivo(item: any) {
     console.log('[DEBUG] Abriendo edición para:', item.idActivo);
@@ -627,7 +670,16 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   saveEditActivo() {
-    if (!this.editActivoForm.nombre) return;
+    const a = this.editActivoForm;
+    if (!a.nombre || !a.descripcion || a.precio == null ||
+        !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
+      this.mostrarNotificacion('Completa todos los campos requeridos *', true);
+      return;
+    }
+    if (a.precio < 0) {
+      this.mostrarNotificacion('El precio no puede ser negativo.', true);
+      return;
+    }
     
     if (this.miRol === 2) {
       const id = this.editActivoForm.idActivo as string;
@@ -643,11 +695,11 @@ export class DesktopDashboardComponent implements OnInit {
         
         this.cambiosService.enviarCambio(cambio).subscribe({
           next: () => {
-            this.mostrarNotificacion('Cambio enviado a revisión. Un administrador lo evaluará.');
+            this.mostrarNotificacion('Solicitud enviada a revision. Un administrador la evaluara.');
             this.closeEditActivo();
             this.loadDataForTab();
           },
-          error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+          error: () => this.mostrarNotificacion('Error al enviar solicitud.', true)
         });
       });
       return;
@@ -660,6 +712,18 @@ export class DesktopDashboardComponent implements OnInit {
 
     this.catalogoService.update('activos', id, this.editActivoForm).subscribe({
       next: () => {
+        const deleteNext = (dIndex: number) => {
+          if (dIndex < this.fotosAEliminar.length) {
+            this.catalogoService.delete('fotos', String(this.fotosAEliminar[dIndex])).subscribe({
+              next: () => deleteNext(dIndex + 1),
+              error: () => deleteNext(dIndex + 1)
+            });
+          } else {
+            startUpload();
+          }
+        };
+
+        const startUpload = () => {
         const uploadNextFile = (index: number) => {
           if (index < this.selectedFiles.length) {
             this.catalogoService.uploadFile(this.selectedFiles[index]).subscribe({
@@ -684,6 +748,12 @@ export class DesktopDashboardComponent implements OnInit {
           uploadNextFile(0);
         } else {
           this.processAssignment(id, fkArea, fkResguardante);
+        }
+        }; // end startUpload
+        if (this.fotosAEliminar.length > 0) {
+          deleteNext(0);
+        } else {
+          startUpload();
         }
       },
       error: (err) => {
@@ -729,10 +799,20 @@ export class DesktopDashboardComponent implements OnInit {
     this.isSaving = false;
     this.closeEditActivo();
     this.loadDataForTab();
+    this.mostrarNotificacion('Activo actualizado correctamente');
   }
 
   saveNuevoActivo() {
-    if (!this.newActivo.idActivo || !this.newActivo.nombre) return;
+    const a = this.newActivo;
+    if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
+        !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
+      this.mostrarNotificacion('Completa todos los campos requeridos *', true);
+      return;
+    }
+    if (a.precio < 0) {
+      this.mostrarNotificacion('El precio no puede ser negativo.', true);
+      return;
+    }
     
     if (this.miRol === 2) {
       // Subir fotos primero si hay, luego enviar el cambio con los filenames
@@ -746,11 +826,11 @@ export class DesktopDashboardComponent implements OnInit {
         
         this.cambiosService.enviarCambio(cambio).subscribe({
           next: () => {
-            this.mostrarNotificacion('Cambio enviado a revisión. Un administrador lo evaluará.');
+            this.mostrarNotificacion('Solicitud enviada a revision. Un administrador la evaluara.');
             this.closeCreateActivo();
             this.loadDataForTab();
           },
-          error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+          error: () => this.mostrarNotificacion('Error al enviar solicitud.', true)
         });
       });
       return;
@@ -763,7 +843,7 @@ export class DesktopDashboardComponent implements OnInit {
     this.newActivo.estado = "1";
 
     // Verificar duplicado antes de guardar
-    this.catalogoService.getById('activos', this.newActivo.idActivo).subscribe({
+    this.catalogoService.getById('activos', this.newActivo.idActivo!).subscribe({
       next: (exists) => {
         if (exists) {
           alert('El No. Activo ya existe en el sistema. Por favor, usa uno diferente.');
@@ -842,14 +922,18 @@ export class DesktopDashboardComponent implements OnInit {
     this.isSaving = false;
     this.closeCreateActivo();
     this.loadDataForTab();
+    this.mostrarNotificacion('Activo guardado correctamente');
   }
 
   // --- MÉTODOS ESTADO / ROL ---
   cambiarEstadoUsuario(idUsuario: number, nuevoEstado: string) {
     if (idUsuario === this.miId) return;
     this.usuariosService.cambiarEstado(idUsuario, nuevoEstado).subscribe({
-      next: () => this.loadDataForTab(),
-      error: console.error
+      next: () => {
+        this.loadDataForTab();
+        this.mostrarNotificacion(nuevoEstado === '3' ? 'Usuario eliminado' : 'Estado actualizado');
+      },
+      error: () => this.mostrarNotificacion('Error al cambiar estado.', true)
     });
   }
 
@@ -875,15 +959,18 @@ export class DesktopDashboardComponent implements OnInit {
       };
       this.cambiosService.enviarCambio(cambio).subscribe({
         next: () => {
-          this.mostrarNotificacion('Cambio de estado enviado a revisión.');
+          this.mostrarNotificacion('Solicitud enviada a revision.');
           this.loadDataForTab();
         },
-        error: () => this.mostrarNotificacion('Error al enviar el cambio.', true)
+        error: () => this.mostrarNotificacion('Error al enviar solicitud.', true)
       });
       return;
     }
     this.catalogoService.cambiarEstado(endpoint, id, nuevoEstado).subscribe({
-      next: () => this.loadDataForTab(),
+      next: () => {
+        this.loadDataForTab();
+        this.mostrarNotificacion(nuevoEstado === '3' ? 'Activo eliminado' : 'Estado actualizado');
+      },
       error: console.error
     });
   }
@@ -989,9 +1076,9 @@ export class DesktopDashboardComponent implements OnInit {
         this.cerrarModalCambio();
         this.loadDataForTab();
         this.cargarContadorPendientes();
-        this.mostrarNotificacion('Cambio aprobado correctamente');
+        this.mostrarNotificacion('Solicitud aprobada');
       },
-      error: () => this.mostrarNotificacion('Error al aprobar el cambio', true)
+      error: () => this.mostrarNotificacion('Error al aprobar solicitud', true)
     });
   }
 
@@ -1010,9 +1097,9 @@ export class DesktopDashboardComponent implements OnInit {
         this.cerrarModalCambio();
         this.loadDataForTab();
         this.cargarContadorPendientes();
-        this.mostrarNotificacion('Cambio rechazado');
+        this.mostrarNotificacion('Solicitud rechazada');
       },
-      error: () => this.mostrarNotificacion('Error al rechazar el cambio', true)
+      error: () => this.mostrarNotificacion('Error al rechazar solicitud', true)
     });
   }
 

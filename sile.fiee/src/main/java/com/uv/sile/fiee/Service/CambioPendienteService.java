@@ -13,6 +13,7 @@ import com.uv.sile.fiee.Repository.CambioPendienteRepository;
 import com.uv.sile.fiee.Repository.FotosRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -60,6 +61,7 @@ public class CambioPendienteService {
         return cambioPendienteRepository.findByIdSolicitanteOrderByCreadoEnDesc(idSolicitante);
     }
 
+    @Transactional
     public CambioPendiente aprobarCambio(Integer idCambio, Integer idRevisor) {
         CambioPendiente cambio = cambioPendienteRepository.findById(idCambio)
                 .orElseThrow(() -> new RuntimeException("Cambio no encontrado"));

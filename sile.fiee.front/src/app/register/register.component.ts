@@ -98,7 +98,6 @@ export class RegisterComponent {
 
   registerForm: FormGroup;
   
-  // Utilizando Signals para asegurar que los cambios se reflejen en la UI sin importar el uso de Zone.js
   isLoading = signal(false);
   isSuccess = signal(false);
   errorMessage = signal('');
