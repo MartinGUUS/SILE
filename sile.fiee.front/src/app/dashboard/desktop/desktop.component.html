@@ -376,7 +376,7 @@
                     <tr>
                       <th>Tipo</th>
                       <th>ID Activo</th>
-                      <th>Tipo Cambio</th>
+                      <th>Nombre</th>
                       <th>Fecha</th>
                       <th>Acciones</th>
                     </tr>
@@ -390,7 +390,7 @@
                         </span>
                       </td>
                       <td>{{ c.tipoCambio === 'CREAR' ? 'Nuevo' : c.idEntidad }}</td>
-                      <td>{{ c.tipoCambio }}</td>
+                      <td>{{ getDatosResumen(c.datosJson) }}</td>
                       <td>{{ c.creadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
                       <td>
                         <button class="action-btn success" (click)="verDetalleCambio(c)">Revisar</button>
@@ -412,11 +412,11 @@
                     <tr>
                       <th>Tipo</th>
                       <th>ID Activo</th>
-                      <th>Solicitante ID</th>
+                      <th>Solicitante</th>
                       <th>Resumen</th>
                       <th>Estado</th>
                       <th>Fecha</th>
-                      <th>Revisor ID</th>
+                      <th>Revisor</th>
                       <th>Detalles</th>
                     </tr>
                   </thead>
@@ -429,7 +429,7 @@
                         </span>
                       </td>
                       <td>{{ c.tipoCambio === 'CREAR' ? 'Nuevo' : c.idEntidad }}</td>
-                      <td>{{ c.idSolicitante || '—' }}</td>
+                      <td>{{ getUserNameById(c.idSolicitante) }}</td>
                       <td>{{ getDatosResumen(c.datosJson) }}</td>
                       <td>
                         <span class="status-badge"
@@ -439,7 +439,7 @@
                         </span>
                       </td>
                       <td>{{ c.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</td>
-                      <td>{{ c.idRevisor || '—' }}</td>
+                      <td>{{ getUserNameById(c.idRevisor) }}</td>
                       <td>
                         <button class="action-btn outline-btn" (click)="verDetalleCambio(c)">Ver</button>
                       </td>
@@ -803,7 +803,7 @@
               <strong>ID:</strong> {{ cambioSeleccionado.idEntidad || 'Nuevo' }}
             </span>
             <span style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem; color: var(--gray-600);">
-              <strong>Solicitante ID:</strong> {{ cambioSeleccionado.idSolicitante }}
+              <strong>Solicitante:</strong> {{ getUserNameById(cambioSeleccionado.idSolicitante) }}
             </span>
             <span *ngIf="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem;" 
               [ngStyle]="{'color': datosJsonParseado?.estado === '3' ? '#dc2626' : (datosJsonParseado?.estado === '2' ? '#d97706' : '#059669')}">
@@ -818,12 +818,12 @@
             </span>
           </div>
           <div *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem; font-size: 0.82rem; color: var(--gray-600);">
-            <span><strong>Revisor ID:</strong> {{ cambioSeleccionado.idRevisor || '—' }}</span>
+            <span><strong>Revisor:</strong> {{ getUserNameById(cambioSeleccionado.idRevisor) }}</span>
             <span><strong>Fecha:</strong> {{ cambioSeleccionado.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
             <span *ngIf="cambioSeleccionado.comentario"><strong>Comentario:</strong> {{ cambioSeleccionado.comentario }}</span>
           </div>
 
-          <div *ngIf="cambioSeleccionado.estado === 'APROBADO' && resumenCambiosTexto()" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #dc2626; font-weight: 500;">
+          <div *ngIf="resumenCambiosTexto()" style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #dc2626; font-weight: 500;">
             {{ resumenCambiosTexto() }}
           </div>
           

@@ -1,12 +1,14 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { UploadService } from './upload.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class CatalogoService {
   private http = inject(HttpClient);
+  private uploadService = inject(UploadService);
 
   getAll(endpoint: string, estado?: string): Observable<any[]> {
     const url = estado ? `/${endpoint}?estado=${estado}` : `/${endpoint}`;
@@ -34,8 +36,6 @@ export class CatalogoService {
   }
 
   uploadFile(file: File): Observable<any> {
-    const formData = new FormData();
-    formData.append('file', file);
-    return this.http.post('/fotos/upload', formData);
+    return this.uploadService.uploadFoto(file);
   }
 }

@@ -112,6 +112,7 @@ export class MobileDashboardComponent implements OnDestroy {
     this.miRol = this.authService.getFkRol();
     const stored = localStorage.getItem('userFullName') || localStorage.getItem('userName');
     this.userName.set(stored || 'Usuario');
+    if (this.miRol === 3) this.activeTab.set('inventario');
     this.loadCatalogos();
     this.loadActivos();
     if (this.miRol === 1) this.cargarContadorPendientes();

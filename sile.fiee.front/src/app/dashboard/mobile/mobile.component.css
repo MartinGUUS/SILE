@@ -40,6 +40,9 @@
 .mob-rol-badge.editor {
   background: #d97706;
 }
+.mob-rol-badge.obs {
+  background: #737373;
+}
 .mob-greeting {
   font-size: 0.8rem;
   color: #737373;

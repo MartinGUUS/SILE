@@ -215,6 +215,12 @@ export class DesktopDashboardComponent implements OnInit {
     this.dataCatalogo.set([]);
     
     this.activeTab.set(tab);
+    if (tab === 'cambios') {
+      this.usuariosService.getAllUsuarios().subscribe({
+        next: d => this.dataUsuarios.set(d),
+        error: () => {}
+      });
+    }
     this.loadDataForTab();
   }
 
@@ -569,6 +575,12 @@ export class DesktopDashboardComponent implements OnInit {
     return r ? `${r.nombres} ${r.apellidos}` : `ID: ${id}`;
   }
 
+  getUserNameById(id: number | undefined): string {
+    if (!id) return '—';
+    const u = this.dataUsuarios().find(user => user.idUsuario === id);
+    return u ? `${id} - ${u.nombre}${u.apellido ? ' ' + u.apellido : ''}` : `${id}`;
+  }
+
   getMarcaName(id: string | undefined): string {
     const m = this.listMarcas().find(marca => marca.idMarca === id);
     return m?.nombre ? m.nombre : (id || 'N/A');
@@ -671,7 +683,7 @@ export class DesktopDashboardComponent implements OnInit {
 
   saveEditActivo() {
     const a = this.editActivoForm;
-    if (!a.nombre || !a.descripcion || a.precio == null ||
+    if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
         !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
       this.mostrarNotificacion('Completa todos los campos requeridos *', true);
       return;
@@ -804,7 +816,7 @@ export class DesktopDashboardComponent implements OnInit {
 
   saveNuevoActivo() {
     const a = this.newActivo;
-    if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
+    if (!a.nombre || !a.descripcion || a.precio == null ||
         !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
       this.mostrarNotificacion('Completa todos los campos requeridos *', true);
       return;
@@ -815,12 +827,13 @@ export class DesktopDashboardComponent implements OnInit {
     }
     
     if (this.miRol === 2) {
-      // Subir fotos primero si hay, luego enviar el cambio con los filenames
+      const id = this.editActivoForm.idActivo as string;
       this.uploadFilesForEditor((filenames) => {
-        const payload = { ...this.newActivo, estado: '1', _fotosFilenames: filenames, _fotosEliminadas: [] };
+        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar };
         const cambio: CambioPendiente = {
-          tipoCambio: 'CREAR',
+          tipoCambio: 'ACTUALIZAR',
           entidad: 'activos',
+          idEntidad: id,
           datosJson: JSON.stringify(payload)
         };
         
