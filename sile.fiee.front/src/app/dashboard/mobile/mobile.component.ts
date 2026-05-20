@@ -133,6 +133,11 @@ export class MobileDashboardComponent implements OnDestroy {
   }
 
   setTab(tab: MobileTab) {
+    if (tab === 'inventario') {
+      this.filtroEstado = '1';
+      this.searchQuery = '';
+    }
+    if (tab === 'cambios') this.filtroCambios = 'pendientes';
     this.activeTab.set(tab);
     if (tab === 'inventario') this.loadActivos();
     if (tab === 'cambios') {

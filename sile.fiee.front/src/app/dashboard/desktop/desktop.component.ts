@@ -213,6 +213,12 @@ export class DesktopDashboardComponent implements OnInit {
     this.dataUsuarios.set([]);
     this.dataActivos.set([]);
     this.dataCatalogo.set([]);
+    this.searchQuery = '';
+
+    if (tab === 'usuarios') this.filtroEstadoUsuarios = '1';
+    if (tab === 'activos') this.filtroEstadoActivos = '1';
+    if (this.isCatalogoTab(tab)) this.filtroEstadoCatalogo[tab] = '1';
+    if (tab === 'cambios') this.filtroCambios = 'pendientes';
     
     this.activeTab.set(tab);
     if (tab === 'cambios') {
