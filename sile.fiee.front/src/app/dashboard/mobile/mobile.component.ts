@@ -80,7 +80,9 @@ export class MobileDashboardComponent implements OnDestroy {
   isSaving = false;
   saveStep = signal('');
   idActivoExiste = signal(false);
+  scanningForCreate = signal(false);
   private checkIdTimer: any;
+  private createScanControls: IScannerControls | null = null;
 
   // --- Edit form ---
   showEditForm = false;
@@ -196,8 +198,7 @@ export class MobileDashboardComponent implements OnDestroy {
       this.dataActivos.set(this.allActivos.filter(a =>
         (a.idActivo && a.idActivo.toLowerCase().includes(q)) ||
         (a.nombre && a.nombre.toLowerCase().includes(q)) ||
-        (a.descripcion && a.descripcion.toLowerCase().includes(q)) ||
-        (a.nSerie && a.nSerie.toLowerCase().includes(q))
+        (a.descripcion && a.descripcion.toLowerCase().includes(q))
       ));
     }
   }
@@ -289,7 +290,70 @@ export class MobileDashboardComponent implements OnDestroy {
     this.loadCatalogos();
   }
 
+  startCreateScan() {
+    if (this.createScanControls) return;
+    this.scanningForCreate.set(true);
+
+    setTimeout(async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        let selectedDeviceId: string | undefined;
+
+        if (videoDevices.length > 0) {
+          selectedDeviceId = videoDevices[videoDevices.length - 1].deviceId;
+          const backCamera = videoDevices.find(d =>
+            d.label.toLowerCase().includes('back') ||
+            d.label.toLowerCase().includes('environment') ||
+            d.label.toLowerCase().includes('traser')
+          );
+          if (backCamera) selectedDeviceId = backCamera.deviceId;
+        }
+
+        const constraints: MediaStreamConstraints = {
+          video: {
+            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+            facingMode: selectedDeviceId ? undefined : 'environment',
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+
+        this.codeReader.decodeFromConstraints(constraints, 'create-video-preview', (result, error) => {
+          if (result) {
+            const text = result.getText();
+            if (navigator.vibrate) navigator.vibrate(200);
+            (this.newActivo as any).idActivo = text;
+            this.onIdActivoChange(text);
+            this.stopCreateScan();
+          }
+          if (error && this.scanningForCreate()) {
+            // silently scanning
+          }
+        }).then(controls => {
+          this.createScanControls = controls;
+        }).catch(err => {
+          console.error('Error escaneando:', err);
+          this.stopCreateScan();
+        });
+
+      } catch (err: any) {
+        console.error('Error:', err);
+        this.stopCreateScan();
+      }
+    }, 250);
+  }
+
+  stopCreateScan() {
+    if (this.createScanControls) {
+      this.createScanControls.stop();
+      this.createScanControls = null;
+    }
+    this.scanningForCreate.set(false);
+  }
+
   closeCreateForm() {
+    this.stopCreateScan();
     this.idActivoExiste.set(false);
     if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.showCreateForm = false;
@@ -321,6 +385,10 @@ export class MobileDashboardComponent implements OnDestroy {
     }
     if (a.precio < 0) {
       this.showToast('El precio no puede ser negativo.', true);
+      return;
+    }
+    if (a.existencias != null && a.existencias < 1) {
+      this.showToast('Las existencias deben ser mínimo 1.', true);
       return;
     }
 
@@ -481,6 +549,10 @@ export class MobileDashboardComponent implements OnDestroy {
     }
     if (a.precio < 0) {
       this.showToast('El precio no puede ser negativo.', true);
+      return;
+    }
+    if (a.existencias != null && a.existencias < 0) {
+      this.showToast('Las existencias no pueden ser negativas.', true);
       return;
     }
 
@@ -766,6 +838,7 @@ export class MobileDashboardComponent implements OnDestroy {
     if (!original) return {};
     const origVal = original[campo];
     const nuevo = valorNuevo;
+    if (nuevo === undefined) return {};
     if (origVal == null && (nuevo == null || nuevo === '')) return {};
     if (origVal != nuevo) {
       return { color: '#dc2626', 'font-weight': '600' };
@@ -787,6 +860,7 @@ export class MobileDashboardComponent implements OnDestroy {
     for (const [campo, label] of Object.entries(labels)) {
       const origVal = original[campo];
       const newVal = this.datosJsonParseado[campo];
+      if (newVal === undefined) continue;
       if (origVal != newVal && !(origVal == null && (newVal == null || newVal === ''))) {
         cambiados.push(label);
       }

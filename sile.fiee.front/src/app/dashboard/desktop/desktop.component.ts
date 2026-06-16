@@ -325,8 +325,7 @@ export class DesktopDashboardComponent implements OnInit {
       this.dataActivos.set(this.allActivos.filter(a =>
         (a.idActivo && a.idActivo.toLowerCase().includes(q)) ||
         (a.nombre && a.nombre.toLowerCase().includes(q)) ||
-        (a.descripcion && a.descripcion.toLowerCase().includes(q)) ||
-        (a.nSerie && a.nSerie.toLowerCase().includes(q))
+        (a.descripcion && a.descripcion.toLowerCase().includes(q))
       ));
     }
   }
@@ -721,6 +720,10 @@ export class DesktopDashboardComponent implements OnInit {
       this.mostrarNotificacion('El precio no puede ser negativo.', true);
       return;
     }
+    if (a.existencias != null && a.existencias < 0) {
+      this.mostrarNotificacion('Las existencias no pueden ser negativas.', true);
+      return;
+    }
     
     if (this.miRol === 2) {
       const id = this.editActivoForm.idActivo as string;
@@ -854,6 +857,10 @@ export class DesktopDashboardComponent implements OnInit {
     }
     if (a.precio < 0) {
       this.mostrarNotificacion('El precio no puede ser negativo.', true);
+      return;
+    }
+    if (a.existencias != null && a.existencias < 1) {
+      this.mostrarNotificacion('Las existencias deben ser mínimo 1.', true);
       return;
     }
     
@@ -1096,6 +1103,7 @@ export class DesktopDashboardComponent implements OnInit {
     if (!this.activoOriginal()) return {};
     const original = this.activoOriginal()[campo];
     const nuevo = valorNuevo;
+    if (nuevo === undefined) return {};
     if (original == null && (nuevo == null || nuevo === '')) return {};
     if (original != nuevo) {
       return { color: '#dc2626', 'font-weight': '600' };
@@ -1116,6 +1124,7 @@ export class DesktopDashboardComponent implements OnInit {
     for (const [campo, label] of Object.entries(labels)) {
       const origVal = this.activoOriginal()[campo];
       const newVal = this.datosJsonParseado[campo];
+      if (newVal === undefined) continue;
       if (origVal != newVal && !(origVal == null && (newVal == null || newVal === ''))) {
         cambiados.push(label);
       }

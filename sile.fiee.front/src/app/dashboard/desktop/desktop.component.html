@@ -90,7 +90,7 @@
       <main class="main-content">
         <header class="topbar">
           <div class="topbar-search">
-            <input *ngIf="activeTab() === 'activos'" type="text" placeholder="Buscar por nombre, código, serie..." class="search-input" [(ngModel)]="searchQuery" (input)="onSearchChange()">
+            <input *ngIf="activeTab() === 'activos'" type="text" placeholder="Buscar por código, nombre o descripción..." class="search-input" [(ngModel)]="searchQuery" (input)="onSearchChange()">
             <span *ngIf="activeTab() !== 'activos'" class="search-placeholder"></span>
           </div>
           <div class="user-profile">
@@ -131,12 +131,13 @@
                     <th>Nombre</th>
                     <th>Descripción</th>
                     <th>Estado</th>
+                    <th>Existencias</th>
                     <th>Precio</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let item of dataActivos()">
+                  <tr *ngFor="let item of dataActivos()" [ngStyle]="{'opacity': item.existencias === 0 ? '0.5' : '1', 'background': item.existencias === 0 ? '#f3f4f6' : 'inherit'}">
                     <td>{{ item.idActivo }}</td>
                     <td>
                       <ng-container *ngIf="editingId !== item.idActivo">{{ item.nombre }}</ng-container>
@@ -157,6 +158,7 @@
                         {{ item.estado === '1' ? 'Activo' : 'Inactivo' }}
                       </span>
                     </td>
+                    <td>{{ item.existencias ?? 'N/A' }}</td>
                     <td>
                       <ng-container *ngIf="editingId !== item.idActivo">{{ '$' + item.precio }}</ng-container>
                       <ng-container *ngIf="editingId === item.idActivo">
@@ -306,7 +308,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let item of dataCatalogo()">
+                  <tr *ngFor="let item of dataCatalogo()" [ngStyle]="{'opacity': getDictId(item) === '1' ? '0.45' : '1', 'background': getDictId(item) === '1' ? '#f3f4f6' : 'inherit'}">
                     <td>{{ getDictId(item) }}</td>
                     <td *ngIf="activeTab() !== 'resguardantes'">
                       <ng-container *ngIf="editingId !== getDictId(item)">{{ item.nombre }}</ng-container>
@@ -562,6 +564,10 @@
             </div>
             <!-- Existencias siempre será 1 por defecto -->
             <div class="form-group">
+              <label>Existencias</label>
+              <input type="number" min="1" [(ngModel)]="newActivo.existencias" [disabled]="idActivoExiste()">
+            </div>
+            <div class="form-group">
               <label>Garantía *</label>
               <input type="text" [(ngModel)]="newActivo.garantia" [disabled]="idActivoExiste()">
             </div>
@@ -646,6 +652,10 @@
               <span class="detail-value">{{ selectedActivo?.descripcion }}</span>
             </div>
             <div class="detail-item">
+              <span class="detail-label">Existencias</span>
+              <span class="detail-value" [ngStyle]="{'color': (selectedActivo?.existencias ?? 1) === 0 ? '#dc2626' : 'inherit'}">{{ selectedActivo?.existencias ?? 'N/A' }}</span>
+            </div>
+            <div class="detail-item">
               <span class="detail-label">Precio</span>
               <span class="detail-value">{{ '$' + selectedActivo?.precio }}</span>
             </div>
@@ -720,6 +730,14 @@
             <div class="form-group">
               <label>Precio *</label>
               <input type="number" min="0" [(ngModel)]="editActivoForm.precio">
+            </div>
+            <div class="form-group">
+              <label>Existencias</label>
+              <input type="number" min="0" [(ngModel)]="editActivoForm.existencias">
+            </div>
+            <div class="form-group">
+              <label>Garantía *</label>
+              <input type="text" [(ngModel)]="editActivoForm.garantia">
             </div>
             <div class="form-group">
               <label>No. Serie *</label>

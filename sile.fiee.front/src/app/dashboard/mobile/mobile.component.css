@@ -333,6 +333,11 @@
   font-weight: 700;
   color: #404040;
 }
+.mob-card-exist {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #6b7280;
+}
 .mob-card-actions {
   display: flex;
   gap: 0.35rem;
@@ -883,6 +888,44 @@
   color: #dc2626;
   font-weight: 600;
   line-height: 1.4;
+}
+
+/* ---- SCAN EN CREATE ---- */
+.mob-id-scan-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+.mob-id-input {
+  flex: 1;
+}
+.mob-scan-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  border: 1px solid #2563eb;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #2563eb;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.mob-scan-btn:active {
+  background: #dbeafe;
+}
+.mob-scan-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.mob-scan-video {
+  width: 100%;
+  max-width: 300px;
+  margin-top: 0.5rem;
+  border-radius: 10px;
+  border: 2px solid #2563eb;
+  background: #000;
 }
 
 /* ---- RESPONSIVE ---- */

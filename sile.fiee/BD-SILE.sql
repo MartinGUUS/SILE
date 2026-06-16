@@ -193,7 +193,7 @@ INSERT IGNORE INTO roles (id_rol, nombre, descripcion, estado) VALUES
 -- 2.3 Áreas
 -- ------------------------------------------
 INSERT IGNORE INTO areas (id_area, nombre, descripcion) VALUES
-    ('1',     'N/A',                          'No asignada'),
+    ('1',     'N/A',                          ''),
     ('A-001', 'Laboratorio de Cómputo',       'Sistemas y programación'),
     ('A-002', 'Taller de Electrónica',        'Prácticas y ensamblaje de circuitos'),
     ('A-003', 'Almacén General',              'Bodega de equipos y materiales'),
