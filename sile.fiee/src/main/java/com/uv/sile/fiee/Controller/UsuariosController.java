@@ -1,21 +1,46 @@
 package com.uv.sile.fiee.Controller;
 
 import com.uv.sile.fiee.Entitty.Usuarios;
+import com.uv.sile.fiee.Security.JwtService;
 import com.uv.sile.fiee.Service.UsuariosService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @RestController
 @RequestMapping(path = "/usuarios")
-@CrossOrigin(origins = "*") // Permite que Angular (u otro) se conecte
+@CrossOrigin(origins = "*")
 public class UsuariosController {
 
     @Autowired
     private UsuariosService usuariosService;
+
+    @Autowired
+    private JwtService jwtService;
+
+    private Integer getIdUsuarioFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return jwtService.extractClaim(token, claims -> claims.get("idUsuario", Integer.class));
+        }
+        return null;
+    }
+
+    private Integer getFkRolFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return jwtService.extractClaim(token, claims -> claims.get("fkRol", Integer.class));
+        }
+        return null;
+    }
 
     // GET http://localhost:8080/usuarios
     @GetMapping
@@ -66,15 +91,28 @@ public class UsuariosController {
 
     // PATCH http://localhost:8080/usuarios/1/estado
     @PatchMapping("/{id}/estado")
-    public ResponseEntity<Usuarios> actualizarEstado(@PathVariable Integer id, @RequestBody java.util.Map<String, String> updates) {
+    public ResponseEntity<Usuarios> actualizarEstado(@PathVariable Integer id, @RequestBody Map<String, String> updates, HttpServletRequest request) {
         Optional<Usuarios> usuarioOptional = usuariosService.findById(id);
         if (usuarioOptional.isPresent()) {
             Usuarios usuario = usuarioOptional.get();
+
+            // Solo un administrador puede cambiar el rol de otro administrador
+            // Nadie puede cambiar el rol del usuario ID=1
+            if (updates.containsKey("fkRol")) {
+                if (id == 1) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(null);
+                }
+                Integer fkRolSolicitante = getFkRolFromRequest(request);
+                if (usuario.getFkRol() != null && usuario.getFkRol() == 1
+                        && (fkRolSolicitante == null || fkRolSolicitante != 1)) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                            .body(null);
+                }
+                usuario.setFkRol(Integer.parseInt(updates.get("fkRol")));
+            }
+
             if (updates.containsKey("estado")) {
                 usuario.setEstado(updates.get("estado"));
-            }
-            if (updates.containsKey("fkRol")) {
-                usuario.setFkRol(Integer.parseInt(updates.get("fkRol")));
             }
             return ResponseEntity.ok(usuariosService.save(usuario));
         }

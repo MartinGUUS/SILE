@@ -991,7 +991,21 @@ export class DesktopDashboardComponent implements OnInit {
   cambiarRolUsuario(idUsuario: number, event: Event) {
     if (idUsuario === this.miId) return;
     const select = event.target as HTMLSelectElement;
-    this.usuariosService.cambiarRol(idUsuario, parseInt(select.value, 10)).subscribe({
+    const nuevoRol = parseInt(select.value, 10);
+
+    const usuario = this.dataUsuarios().find(u => u.idUsuario === idUsuario);
+    if (usuario && usuario.fkRol === 1 && this.miRol !== 1) {
+      this.mostrarNotificacion('Solo un administrador puede cambiar el rol de otro administrador.', true);
+      select.value = String(usuario.fkRol);
+      return;
+    }
+    if (idUsuario === 1) {
+      this.mostrarNotificacion('No se puede cambiar el rol del administrador principal.', true);
+      select.value = String(usuario?.fkRol ?? 1);
+      return;
+    }
+
+    this.usuariosService.cambiarRol(idUsuario, nuevoRol).subscribe({
       next: () => this.loadDataForTab(),
       error: console.error
     });
