@@ -339,10 +339,10 @@
                     </td>
                     <td>
                       <ng-container *ngIf="editingId !== getDictId(item)">
-                        <button *ngIf="miRol === 1" class="action-btn edit" (click)="startEdit(getDictId(item), item)">Editar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn activate" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '1')">Activar</button>
-                        <button *ngIf="item.estado === '1' && miRol === 1" class="action-btn danger" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn danger" (click)="eliminarRegistro(activeTab(), getDictId(item))">Eliminar</button>
+                        <button *ngIf="miRol === 1 && getDictId(item) !== '1'" class="action-btn edit" (click)="startEdit(getDictId(item), item)">Editar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1 && getDictId(item) !== '1'" class="action-btn activate" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '1')">Activar</button>
+                        <button *ngIf="item.estado === '1' && miRol === 1 && getDictId(item) !== '1'" class="action-btn danger" (click)="cambiarEstadoGenerico(activeTab(), getDictId(item), '2')">Desactivar</button>
+                        <button *ngIf="item.estado === '2' && miRol === 1 && getDictId(item) !== '1'" class="action-btn danger" (click)="eliminarRegistro(activeTab(), getDictId(item))">Eliminar</button>
                       </ng-container>
                       <ng-container *ngIf="editingId === getDictId(item)">
                         <button class="action-btn success" (click)="saveEditCatalogo(activeTab(), getDictId(item))">Guardar</button>
@@ -545,50 +545,51 @@
           <div class="form-grid">
             <div class="form-group">
               <label>No. Activo *</label>
-              <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003" #idActivoInput>
+              <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003" #idActivoInput (ngModelChange)="onIdActivoChange($event)">
+              <span *ngIf="idActivoExiste()" style="color: #dc2626; font-size: 0.8rem; font-weight: 600;">Este ID ya existe en el sistema</span>
             </div>
             <div class="form-group">
               <label>Nombre *</label>
-              <input type="text" [(ngModel)]="newActivo.nombre">
+              <input type="text" [(ngModel)]="newActivo.nombre" [disabled]="idActivoExiste()">
             </div>
             <div class="form-group full-width">
               <label>Descripción *</label>
-              <input type="text" [(ngModel)]="newActivo.descripcion">
+              <input type="text" [(ngModel)]="newActivo.descripcion" [disabled]="idActivoExiste()">
             </div>
             <div class="form-group">
               <label>Precio *</label>
-              <input type="number" min="0" [(ngModel)]="newActivo.precio">
+              <input type="number" min="0" [(ngModel)]="newActivo.precio" [disabled]="idActivoExiste()">
             </div>
             <!-- Existencias siempre será 1 por defecto -->
             <div class="form-group">
               <label>Garantía *</label>
-              <input type="text" [(ngModel)]="newActivo.garantia">
+              <input type="text" [(ngModel)]="newActivo.garantia" [disabled]="idActivoExiste()">
             </div>
             <div class="form-group">
               <label>No. Serie *</label>
-              <input type="text" [(ngModel)]="newActivo.nSerie">
+              <input type="text" [(ngModel)]="newActivo.nSerie" [disabled]="idActivoExiste()">
             </div>
             <div class="form-group">
               <label>Marca *</label>
-              <select [(ngModel)]="newActivo.fkMarca">
+              <select [(ngModel)]="newActivo.fkMarca" [disabled]="idActivoExiste()">
                 <option *ngFor="let m of listMarcas()" [value]="m.idMarca">{{ m.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Proveedor *</label>
-              <select [(ngModel)]="newActivo.fkProvedor">
+              <select [(ngModel)]="newActivo.fkProvedor" [disabled]="idActivoExiste()">
                 <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Línea *</label>
-              <select [(ngModel)]="newActivo.fkLinea">
+              <select [(ngModel)]="newActivo.fkLinea" [disabled]="idActivoExiste()">
                 <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Presentación *</label>
-              <select [(ngModel)]="newActivo.fkPresentacion">
+              <select [(ngModel)]="newActivo.fkPresentacion" [disabled]="idActivoExiste()">
                 <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
               </select>
             </div>
@@ -598,19 +599,19 @@
             </div>
             <div class="form-group">
               <label>Área</label>
-              <select [(ngModel)]="newActivo.fkArea">
+              <select [(ngModel)]="newActivo.fkArea" [disabled]="idActivoExiste()">
                 <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Resguardante</label>
-              <select [(ngModel)]="newActivo.fkResguardante">
+              <select [(ngModel)]="newActivo.fkResguardante" [disabled]="idActivoExiste()">
                 <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
               </select>
             </div>
             <div class="form-group full-width" style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin-top: 0.5rem;">
               <label>Importar Fotos (Opcional)</label>
-              <input type="file" accept="image/*" (change)="onFileSelected($event)" multiple>
+              <input type="file" accept="image/*" (change)="onFileSelected($event)" multiple [disabled]="idActivoExiste()">
               <div *ngIf="selectedFiles.length > 0" style="margin-top: 0.5rem; color: #059669; font-size: 0.8rem;">
                 {{ selectedFiles.length }} archivos seleccionados.
               </div>
@@ -618,7 +619,7 @@
           </div>
           <div class="modal-actions">
             <button class="action-btn danger" (click)="closeCreateActivo()" [disabled]="isSaving">Cancelar</button>
-            <button class="action-btn activate" (click)="saveNuevoActivo()" [disabled]="isSaving">{{ isSaving ? 'Guardando...' : 'Guardar Activo' }}</button>
+            <button class="action-btn activate" (click)="saveNuevoActivo()" [disabled]="isSaving || idActivoExiste()">{{ isSaving ? 'Guardando...' : 'Guardar Activo' }}</button>
           </div>
         </div>
       </div>
@@ -751,14 +752,12 @@
             <div class="form-group">
               <label>Área</label>
               <select [(ngModel)]="editActivoForm.fkArea">
-                <option value="">Seleccionar área...</option>
                 <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.idArea }} - {{ a.nombre }}</option>
               </select>
             </div>
             <div class="form-group">
               <label>Resguardante</label>
               <select [(ngModel)]="editActivoForm.fkResguardante">
-                <option [ngValue]="null">Seleccionar resguardante...</option>
                 <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
               </select>
             </div>

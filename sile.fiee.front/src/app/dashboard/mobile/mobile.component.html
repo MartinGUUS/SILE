@@ -249,79 +249,80 @@
       <div class="mob-modal-body">
         <div class="mob-form-group">
           <label>No. Activo *</label>
-          <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003" class="mob-input" />
+          <input type="text" [(ngModel)]="newActivo.idActivo" placeholder="Ej: ACT-10003" class="mob-input" (ngModelChange)="onIdActivoChange($event)" />
+          <span *ngIf="idActivoExiste()" style="color: #dc2626; font-size: 0.75rem; font-weight: 600; display: block; margin-top: 0.25rem;">Este ID ya existe en el sistema</span>
         </div>
         <div class="mob-form-group">
           <label>Nombre *</label>
-          <input type="text" [(ngModel)]="newActivo.nombre" placeholder="Nombre del activo" class="mob-input" />
+          <input type="text" [(ngModel)]="newActivo.nombre" placeholder="Nombre del activo" class="mob-input" [disabled]="idActivoExiste()" />
         </div>
         <div class="mob-form-group">
           <label>Descripción *</label>
-          <input type="text" [(ngModel)]="newActivo.descripcion" placeholder="Descripción" class="mob-input" />
+          <input type="text" [(ngModel)]="newActivo.descripcion" placeholder="Descripción" class="mob-input" [disabled]="idActivoExiste()" />
         </div>
         <div class="mob-form-group">
           <label>Precio *</label>
-          <input type="number" min="0" [(ngModel)]="newActivo.precio" class="mob-input" />
+          <input type="number" min="0" [(ngModel)]="newActivo.precio" class="mob-input" [disabled]="idActivoExiste()" />
         </div>
         <div class="mob-form-group">
           <label>No. Serie *</label>
-          <input type="text" [(ngModel)]="newActivo.nSerie" class="mob-input" />
+          <input type="text" [(ngModel)]="newActivo.nSerie" class="mob-input" [disabled]="idActivoExiste()" />
         </div>
         <div class="mob-form-group">
           <label>Garantía *</label>
-          <input type="text" [(ngModel)]="newActivo.garantia" class="mob-input" />
+          <input type="text" [(ngModel)]="newActivo.garantia" class="mob-input" [disabled]="idActivoExiste()" />
         </div>
         <div class="mob-form-group">
           <label>Marca *</label>
-            <select [(ngModel)]="newActivo.fkMarca" class="mob-input">
+            <select [(ngModel)]="newActivo.fkMarca" class="mob-input" [disabled]="idActivoExiste()">
               <option *ngFor="let m of listMarcas()" [value]="m.idMarca">{{ m.nombre }}</option>
           </select>
         </div>
         <div class="mob-form-group">
           <label>Proveedor *</label>
-          <select [(ngModel)]="newActivo.fkProvedor" class="mob-input">            <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
+          <select [(ngModel)]="newActivo.fkProvedor" class="mob-input" [disabled]="idActivoExiste()">            <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
           </select>
         </div>
         <div class="mob-form-group">
           <label>Línea *</label>
-          <select [(ngModel)]="newActivo.fkLinea" class="mob-input">            <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
+          <select [(ngModel)]="newActivo.fkLinea" class="mob-input" [disabled]="idActivoExiste()">            <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
           </select>
         </div>
         <div class="mob-form-group">
           <label>Presentación *</label>
-          <select [(ngModel)]="newActivo.fkPresentacion" class="mob-input">            <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
+          <select [(ngModel)]="newActivo.fkPresentacion" class="mob-input" [disabled]="idActivoExiste()">            <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
           </select>
         </div>
         <div class="mob-detail-divider">Asignación</div>
         <div class="mob-form-group">
           <label>Área</label>
-          <select [(ngModel)]="newActivo.fkArea" class="mob-input">            <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.nombre }}</option>
+          <select [(ngModel)]="newActivo.fkArea" class="mob-input" [disabled]="idActivoExiste()">            <option *ngFor="let a of listAreas()" [value]="a.idArea">{{ a.nombre }}</option>
           </select>
         </div>
         <div class="mob-form-group">
           <label>Resguardante</label>
-          <select [(ngModel)]="newActivo.fkResguardante" class="mob-input">            <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
+          <select [(ngModel)]="newActivo.fkResguardante" class="mob-input" [disabled]="idActivoExiste()">            <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
           </select>
         </div>
         <div class="mob-form-group">
           <label>Fotos</label>
           <div class="mob-file-btns">
-            <label class="mob-file-btn">
+            <label class="mob-file-btn" [class.mob-disabled]="idActivoExiste()">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
               Cámara
-              <input type="file" accept="image/*" capture="environment" (change)="onFilesSelected($event)" multiple hidden />
+              <input type="file" accept="image/*" capture="environment" (change)="onFilesSelected($event)" multiple hidden [disabled]="idActivoExiste()" />
             </label>
-            <label class="mob-file-btn mob-file-btn-outline">
+            <label class="mob-file-btn mob-file-btn-outline" [class.mob-disabled]="idActivoExiste()">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
               Galería
-              <input type="file" accept="image/*" (change)="onFilesSelected($event)" multiple hidden />
+              <input type="file" accept="image/*" (change)="onFilesSelected($event)" multiple hidden [disabled]="idActivoExiste()" />
             </label>
           </div>
           <div class="mob-file-count" *ngIf="selectedFiles.length">{{ selectedFiles.length }} archivo(s)</div>
         </div>
         <div class="mob-modal-actions">
           <button class="mob-btn mob-btn-danger-outline" (click)="closeCreateForm()" [disabled]="isSaving">Cancelar</button>
-          <button class="mob-btn mob-btn-success-outline" (click)="saveNuevoActivo()" [disabled]="isSaving">
+          <button class="mob-btn mob-btn-success-outline" (click)="saveNuevoActivo()" [disabled]="isSaving || idActivoExiste()">
             {{ isSaving ? (saveStep() || 'Guardando...') : 'Guardar' }}
           </button>
         </div>

@@ -79,6 +79,8 @@ export class MobileDashboardComponent implements OnDestroy {
   selectedFiles: File[] = [];
   isSaving = false;
   saveStep = signal('');
+  idActivoExiste = signal(false);
+  private checkIdTimer: any;
 
   // --- Edit form ---
   showEditForm = false;
@@ -259,11 +261,28 @@ export class MobileDashboardComponent implements OnDestroy {
   }
 
   // ===================== CREATE =====================
+
+  onIdActivoChange(valor: string) {
+    if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
+    if (!valor || !valor.trim()) {
+      this.idActivoExiste.set(false);
+      return;
+    }
+    this.checkIdTimer = setTimeout(() => {
+      this.catalogoService.getById('activos', valor.trim()).subscribe({
+        next: () => this.idActivoExiste.set(true),
+        error: () => this.idActivoExiste.set(false)
+      });
+    }, 400);
+  }
+
   openCreateForm() {
+    this.idActivoExiste.set(false);
+    if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.newActivo = {
       idActivo: '', nombre: '', descripcion: '', precio: undefined, existencias: 1,
       garantia: '', nSerie: '', fkMarca: '', fkProvedor: '', fkLinea: '', fkPresentacion: '',
-      fkArea: '', fkResguardante: '', estado: '1'
+      fkArea: '', fkResguardante: undefined, estado: '1'
     };
     this.selectedFiles = [];
     this.showCreateForm = true;
@@ -271,6 +290,8 @@ export class MobileDashboardComponent implements OnDestroy {
   }
 
   closeCreateForm() {
+    this.idActivoExiste.set(false);
+    if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.showCreateForm = false;
     this.selectedFiles = [];
   }
@@ -291,6 +312,8 @@ export class MobileDashboardComponent implements OnDestroy {
 
   saveNuevoActivo() {
     const a: any = this.newActivo;
+    if (!a.fkArea) a.fkArea = '1';
+    if (!a.fkResguardante) a.fkResguardante = 1;
     if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
         !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
       this.showToast('Completa todos los campos requeridos *', true);
@@ -373,10 +396,10 @@ export class MobileDashboardComponent implements OnDestroy {
   }
 
   private crearAsignacionFinal(idActivo: string, fkArea: string, fkResguardante: string) {
-    if (fkArea && fkResguardante) {
+    if (fkArea || fkResguardante) {
       this.saveStep.set('Guardando asignación...');
       this.catalogoService.create('asignaciones', {
-        fkActivo: idActivo, fkArea, fkResguardante,
+        fkActivo: idActivo, fkArea: fkArea || null, fkResguardante: fkResguardante || null,
         creadoPor: this.miId, ultimoActualizadoPor: this.miId, estado: '1'
       }).subscribe({ next: () => this.finalizeSave(), error: () => this.finalizeSave() });
     } else {
@@ -449,6 +472,8 @@ export class MobileDashboardComponent implements OnDestroy {
 
   saveEditActivo() {
     const a = this.editActivoForm;
+    if (!a.fkArea) a.fkArea = '1';
+    if (!a.fkResguardante) a.fkResguardante = 1;
     if (!a.nombre || !a.descripcion || a.precio == null ||
         !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
       this.showToast('Completa todos los campos requeridos *', true);
@@ -528,16 +553,16 @@ export class MobileDashboardComponent implements OnDestroy {
   }
 
   private processAssignment(id: string, fkArea: string, fkResguardante: number | string) {
-    if (fkArea && fkResguardante) {
+    if (fkArea || fkResguardante) {
       if (this.editAsignacion()) {
-        const updated = { ...this.editAsignacion(), fkArea, fkResguardante, ultimoActualizadoPor: this.miId };
+        const updated = { ...this.editAsignacion(), fkArea: fkArea || null, fkResguardante: fkResguardante || null, ultimoActualizadoPor: this.miId };
         this.catalogoService.update('asignaciones', String(this.editAsignacion()?.idAsignaciones), updated).subscribe({
           next: () => this.finalizeEdit(),
           error: () => this.finalizeEdit()
         });
       } else {
         this.catalogoService.create('asignaciones', {
-          fkActivo: id, fkArea, fkResguardante,
+          fkActivo: id, fkArea: fkArea || null, fkResguardante: fkResguardante || null,
           creadoPor: this.miId, ultimoActualizadoPor: this.miId, estado: '1'
         }).subscribe({ next: () => this.finalizeEdit(), error: () => this.finalizeEdit() });
       }
@@ -708,19 +733,41 @@ export class MobileDashboardComponent implements OnDestroy {
         next: fotos => this.fotosActualesCambio.set(fotos),
         error: () => {}
       });
-      if (cambio.tipoCambio === 'ACTUALIZAR') {
-        this.catalogoService.getById('activos', cambio.idEntidad).subscribe({
-          next: activo => this.activoOriginal.set(activo),
-          error: () => {}
-        });
+      if (cambio.tipoCambio === 'ACTUALIZAR' || cambio.tipoCambio === 'ELIMINAR') {
+        // Para cambios ya procesados, usar _estadoAnterior guardado en el JSON
+        if (cambio.estado !== 'PENDIENTE' && this.datosJsonParseado?._estadoAnterior) {
+          const anterior = this.datosJsonParseado._estadoAnterior;
+          delete anterior._estadoAnterior;
+          this.activoOriginal.set(anterior);
+        } else if (cambio.tipoCambio === 'ACTUALIZAR') {
+          forkJoin({
+            activo: this.catalogoService.getById('activos', cambio.idEntidad).pipe(catchError(() => of(null))),
+            asignaciones: this.catalogoService.getAll(`asignaciones/activo/${cambio.idEntidad}`).pipe(catchError(() => of([])))
+          }).subscribe({
+            next: result => {
+              const activo = result.activo;
+              if (activo) {
+                if (result.asignaciones && result.asignaciones.length > 0) {
+                  (activo as any).fkArea = result.asignaciones[0].fkArea;
+                  (activo as any).fkResguardante = result.asignaciones[0].fkResguardante;
+                }
+                this.activoOriginal.set(activo);
+              }
+            },
+            error: () => {}
+          });
+        }
       }
     }
   }
 
   campoCambiado(valorNuevo: any, campo: string): any {
     const original = this.activoOriginal() as any;
-    if (!original || original[campo] == null) return {};
-    if (original[campo] != valorNuevo) {
+    if (!original) return {};
+    const origVal = original[campo];
+    const nuevo = valorNuevo;
+    if (origVal == null && (nuevo == null || nuevo === '')) return {};
+    if (origVal != nuevo) {
       return { color: '#dc2626', 'font-weight': '600' };
     }
     return {};
@@ -738,7 +785,9 @@ export class MobileDashboardComponent implements OnDestroy {
     const cambiados: string[] = [];
     const original = this.activoOriginal() as any;
     for (const [campo, label] of Object.entries(labels)) {
-      if (original[campo] != null && original[campo] != this.datosJsonParseado[campo]) {
+      const origVal = original[campo];
+      const newVal = this.datosJsonParseado[campo];
+      if (origVal != newVal && !(origVal == null && (newVal == null || newVal === ''))) {
         cambiados.push(label);
       }
     }

@@ -1,296 +1,267 @@
-drop database if exists SILE;
-
-create database if not exists SILE;
-
-use SILE;
-
-drop table if exists roles;
-
-create table if not exists roles (
-    id_rol int auto_increment primary key,
-    nombre varchar(50) not null,
-    descripcion varchar(100),
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-insert into
-    roles (nombre, descripcion)
-values (
-        'Administrador',
-        'Administrador del sistema'
-    ),
-    (
-        'Servicio social',
-        'Usuario del sistema'
-    ),
-    (
-        'Personal de confianza',
-        'Usuario del sistema'
-    );
-
-drop table if exists usuarios;
-
-create table if not exists usuarios (
-    id_usuario int auto_increment primary key,
-    nombre varchar(50) not null,
-    apellido varchar(50) not null,
-    correo varchar(50) not null,
-    contrasena varchar(150) not null,
-    fk_rol int not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp,
-    foreign key (fk_rol) references roles (id_rol)
-);
-
-drop table if exists areas;
-
-create table if not exists areas (
-    id_area varchar(50) primary key,
-    nombre varchar(50) not null,
-    descripcion varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-drop table if exists presentacion;
-
-create table if not exists presentacion (
-    id_presentacion varchar(50) primary key,
-    nombre varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-drop table if exists lineas;
-
-create table if not exists lineas (
-    id_linea varchar(50) primary key,
-    nombre varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-drop table if exists marcas;
-
-create table if not exists marcas (
-    id_marca varchar(50) primary key,
-    nombre varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-drop table if exists provedores;
-
-create table if not exists provedores (
-    id_provedor varchar(50) primary key,
-    nombre varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-drop table if exists activos;
-
-create table if not exists activos (
-    no_activo varchar(15) primary key,
-    nombre varchar(50) not null,
-    descripcion varchar(50) not null,
-    precio decimal(10, 2),
-    existencias int not null,
-    garantia varchar(50) not null,
-    n_serie varchar(50) not null,
-    fk_provedor varchar(50) not null,
-    fk_marca varchar(50) not null,
-    fk_linea varchar(50) not null,
-    fk_presentacion varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp,
-    creado_por int not null,
-    ultimo_actualizado_por int not null,
-    foreign key (fk_provedor) references provedores (id_provedor),
-    foreign key (fk_marca) references marcas (id_marca),
-    foreign key (fk_linea) references lineas (id_linea),
-    foreign key (fk_presentacion) references presentacion (id_presentacion),
-    foreign key (creado_por) references usuarios (id_usuario),
-    foreign key (ultimo_actualizado_por) references usuarios (id_usuario)
-);
-
-drop table if exists fotos;
-
-create table if not exists fotos (
-    id_foto int auto_increment primary key,
-    fk_activo varchar(15) not null,
-    foto varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp,
-    creado_por int not null,
-    ultimo_actualizado_por int not null,
-    foreign key (fk_activo) references activos (no_activo),
-    foreign key (creado_por) references usuarios (id_usuario),
-    foreign key (ultimo_actualizado_por) references usuarios (id_usuario)
-);
-
-drop table if exists resguardantes;
-
-create table if not exists resguardantes (
-    id_resguardante int auto_increment primary key,
-    nombres varchar(50) not null,
-    apellidos varchar(50) not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp
-);
-
-drop table if exists asignaciones;
-
-create table if not exists asignaciones (
-    id_asignaciones int not null AUTO_INCREMENT primary key,
-    fk_activo varchar(15) not null,
-    fk_area varchar(50) not null,
-    fk_resguardante int not null,
-    estado int not null default 1,
-    creado_en timestamp default current_timestamp,
-    actualizado_en timestamp default current_timestamp on update current_timestamp,
-    creado_por int not null,
-    ultimo_actualizado_por int not null,
-    foreign key (fk_activo) references activos (no_activo),
-    foreign key (fk_area) references areas (id_area),
-    foreign key (fk_resguardante) references resguardantes (id_resguardante),
-    foreign key (ultimo_actualizado_por) references usuarios (id_usuario)
-);
-
 -- ==========================================
--- INSERT DE DATOS CATÁLOGO REQUERIDOS (PARA PRODUCTOS/ACTIVOS)
+-- SILE - Sistema de Inventario
+-- Base de Datos
 -- ==========================================
 
--- 1. Áreas
-INSERT IGNORE INTO
-    areas (id_area, nombre, descripcion)
-VALUES (
-        'A-001',
-        'Laboratorio de Cómputo',
-        'Área principal de sistemas y programación'
-    ),
-    (
-        'A-002',
-        'Taller de Electrónica',
-        'Prácticas y ensamblaje de circuitos'
-    );
+DROP DATABASE IF EXISTS SILE;
+CREATE DATABASE IF NOT EXISTS SILE;
+USE SILE;
 
--- 2. Presentación
-INSERT IGNORE INTO
-    presentacion (id_presentacion, nombre)
-VALUES ('P-CAJA', 'En caja'),
-    ('P-UNID', 'Unidad suelta'),
-    (
-        'P-KIT',
-        'Paquete / Kit completo'
-    );
 
--- 3. Líneas
-INSERT IGNORE INTO
-    lineas (id_linea, nombre)
-VALUES (
-        'L-COMP',
-        'Computación y Sistemas'
-    ),
-    (
-        'L-ELEC',
-        'Herramienta y Electrónica'
-    );
+-- 1.1 Roles
+DROP TABLE IF EXISTS roles;
+CREATE TABLE IF NOT EXISTS roles (
+    id_rol          INT AUTO_INCREMENT PRIMARY KEY,
+    nombre          VARCHAR(50)  NOT NULL,
+    descripcion     VARCHAR(100),
+    estado          INT          NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
--- 4. Marcas
-INSERT IGNORE INTO
-    marcas (id_marca, nombre)
-VALUES ('M-DELL', 'Dell Technologies'),
-    ('M-FLUKE', 'Fluke Networks'),
-    ('M-HP', 'Hewlett-Packard');
+-- 1.2 Usuarios
+DROP TABLE IF EXISTS usuarios;
+CREATE TABLE IF NOT EXISTS usuarios (
+    id_usuario              INT AUTO_INCREMENT PRIMARY KEY,
+    nombre                  VARCHAR(50)  NOT NULL,
+    apellido                VARCHAR(50)  NOT NULL,
+    correo                  VARCHAR(50)  NOT NULL,
+    contrasena              VARCHAR(150) NOT NULL,
+    fk_rol                  INT          NOT NULL,
+    estado                  INT          NOT NULL DEFAULT 1,
+    creado_en               TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en          TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (fk_rol)    REFERENCES roles (id_rol)
+);
 
--- 5. Proveedores
-INSERT IGNORE INTO
-    provedores (id_provedor, nombre)
-VALUES (
-        'PRV-001',
-        'Soluciones Tecnológicas S.A de C.V'
-    ),
-    (
-        'PRV-002',
-        'Electrónica Global Monterrey'
-    );
+-- 1.3 Áreas
+DROP TABLE IF EXISTS areas;
+CREATE TABLE IF NOT EXISTS areas (
+    id_area         VARCHAR(50) PRIMARY KEY,
+    nombre          VARCHAR(50) NOT NULL,
+    descripcion     VARCHAR(50) NOT NULL,
+    estado          INT         NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-INSERT IGNORE INTO
-    roles (
-        id_rol,
-        nombre,
-        descripcion,
-        estado
-    )
-VALUES (
-        1,
-        'Administrador',
-        'Puede hacer todo lo relacionado con el sistema',
-        1
-    );
+-- 1.4 Presentaciones
+DROP TABLE IF EXISTS presentacion;
+CREATE TABLE IF NOT EXISTS presentacion (
+    id_presentacion VARCHAR(50) PRIMARY KEY,
+    nombre          VARCHAR(50) NOT NULL,
+    estado          INT         NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-INSERT IGNORE INTO
-    roles (
-        id_rol,
-        nombre,
-        descripcion,
-        estado
-    )
-VALUES (
-        2,
-        'Editor',
-        'Puede crear, editar y eliminar activos con flujo de aprobación',
-        1
-    );
+-- 1.5 Líneas
+DROP TABLE IF EXISTS lineas;
+CREATE TABLE IF NOT EXISTS lineas (
+    id_linea        VARCHAR(50) PRIMARY KEY,
+    nombre          VARCHAR(50) NOT NULL,
+    estado          INT         NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-INSERT IGNORE INTO
-    roles (
-        id_rol,
-        nombre,
-        descripcion,
-        estado
-    )
-VALUES (
-        3,
-        'Observador',
-        'Solo puede ver los activos',
-        1
-    );
+-- 1.6 Marcas
+DROP TABLE IF EXISTS marcas;
+CREATE TABLE IF NOT EXISTS marcas (
+    id_marca        VARCHAR(50) PRIMARY KEY,
+    nombre          VARCHAR(50) NOT NULL,
+    estado          INT         NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-drop table if exists cambios_pendientes;
+-- 1.7 Proveedores
+DROP TABLE IF EXISTS provedores;
+CREATE TABLE IF NOT EXISTS provedores (
+    id_provedor     VARCHAR(50) PRIMARY KEY,
+    nombre          VARCHAR(50) NOT NULL,
+    estado          INT         NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
 
-CREATE TABLE cambios_pendientes (
-    id_cambio INT AUTO_INCREMENT PRIMARY KEY,
-    tipo_cambio ENUM(
-        'CREAR',
-        'ACTUALIZAR',
-        'ELIMINAR'
-    ) NOT NULL,
-    entidad VARCHAR(50) NOT NULL DEFAULT 'activos',
-    id_entidad VARCHAR(50) DEFAULT NULL,
-    datos_json JSON NOT NULL,
-    id_solicitante INT NOT NULL,
-    id_revisor INT DEFAULT NULL,
-    estado ENUM(
-        'PENDIENTE',
-        'APROBADO',
-        'RECHAZADO'
-    ) NOT NULL DEFAULT 'PENDIENTE',
-    comentario VARCHAR(500) DEFAULT NULL,
-    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    actualizado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+-- 1.8 Resguardantes
+DROP TABLE IF EXISTS resguardantes;
+CREATE TABLE IF NOT EXISTS resguardantes (
+    id_resguardante INT AUTO_INCREMENT PRIMARY KEY,
+    nombres         VARCHAR(50) NOT NULL,
+    apellidos       VARCHAR(50) NOT NULL,
+    estado          INT         NOT NULL DEFAULT 1,
+    creado_en       TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- 1.9 Activos
+DROP TABLE IF EXISTS activos;
+CREATE TABLE IF NOT EXISTS activos (
+    no_activo               VARCHAR(15)    PRIMARY KEY,
+    nombre                  VARCHAR(50)    NOT NULL,
+    descripcion             VARCHAR(50)    NOT NULL,
+    precio                  DECIMAL(10,2),
+    existencias             INT            NOT NULL,
+    garantia                VARCHAR(50)    NOT NULL,
+    n_serie                 VARCHAR(50)    NOT NULL,
+    fk_provedor             VARCHAR(50)    NOT NULL,
+    fk_marca                VARCHAR(50)    NOT NULL,
+    fk_linea                VARCHAR(50)    NOT NULL,
+    fk_presentacion         VARCHAR(50)    NOT NULL,
+    estado                  INT            NOT NULL DEFAULT 1,
+    creado_en               TIMESTAMP      DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en          TIMESTAMP      DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creado_por              INT            NOT NULL,
+    ultimo_actualizado_por  INT            NOT NULL,
+    FOREIGN KEY (fk_provedor)             REFERENCES provedores (id_provedor),
+    FOREIGN KEY (fk_marca)                REFERENCES marcas (id_marca),
+    FOREIGN KEY (fk_linea)                REFERENCES lineas (id_linea),
+    FOREIGN KEY (fk_presentacion)         REFERENCES presentacion (id_presentacion),
+    FOREIGN KEY (creado_por)              REFERENCES usuarios (id_usuario),
+    FOREIGN KEY (ultimo_actualizado_por) REFERENCES usuarios (id_usuario)
+);
+
+-- 1.10 Fotos
+DROP TABLE IF EXISTS fotos;
+CREATE TABLE IF NOT EXISTS fotos (
+    id_foto                 INT AUTO_INCREMENT PRIMARY KEY,
+    fk_activo               VARCHAR(15) NOT NULL,
+    foto                    VARCHAR(50) NOT NULL,
+    estado                  INT         NOT NULL DEFAULT 1,
+    creado_en               TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en          TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creado_por              INT         NOT NULL,
+    ultimo_actualizado_por  INT         NOT NULL,
+    FOREIGN KEY (fk_activo)               REFERENCES activos (no_activo),
+    FOREIGN KEY (creado_por)              REFERENCES usuarios (id_usuario),
+    FOREIGN KEY (ultimo_actualizado_por) REFERENCES usuarios (id_usuario)
+);
+
+-- 1.11 Asignaciones
+DROP TABLE IF EXISTS asignaciones;
+CREATE TABLE IF NOT EXISTS asignaciones (
+    id_asignaciones         INT AUTO_INCREMENT PRIMARY KEY,
+    fk_activo               VARCHAR(15) NOT NULL,
+    fk_area                 VARCHAR(50) NULL,
+    fk_resguardante         INT         NULL,
+    estado                  INT         NOT NULL DEFAULT 1,
+    creado_en               TIMESTAMP   DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en          TIMESTAMP   DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    creado_por              INT         NOT NULL,
+    ultimo_actualizado_por  INT         NOT NULL,
+    FOREIGN KEY (fk_activo)               REFERENCES activos (no_activo),
+    FOREIGN KEY (fk_area)                 REFERENCES areas (id_area),
+    FOREIGN KEY (fk_resguardante)         REFERENCES resguardantes (id_resguardante),
+    FOREIGN KEY (ultimo_actualizado_por) REFERENCES usuarios (id_usuario)
+);
+
+-- 1.12 Cambios Pendientes
+DROP TABLE IF EXISTS cambios_pendientes;
+CREATE TABLE IF NOT EXISTS cambios_pendientes (
+    id_cambio       INT AUTO_INCREMENT PRIMARY KEY,
+    tipo_cambio     ENUM('CREAR', 'ACTUALIZAR', 'ELIMINAR') NOT NULL,
+    entidad         VARCHAR(50)  NOT NULL DEFAULT 'activos',
+    id_entidad      VARCHAR(50)  DEFAULT NULL,
+    datos_json      JSON         NOT NULL,
+    id_solicitante  INT          NOT NULL,
+    id_revisor      INT          DEFAULT NULL,
+    estado          ENUM('PENDIENTE', 'APROBADO', 'RECHAZADO') NOT NULL DEFAULT 'PENDIENTE',
+    comentario      VARCHAR(500) DEFAULT NULL,
+    creado_en       TIMESTAMP    DEFAULT CURRENT_TIMESTAMP,
+    actualizado_en  TIMESTAMP    DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (id_solicitante) REFERENCES usuarios (id_usuario),
-    FOREIGN KEY (id_revisor) REFERENCES usuarios (id_usuario)
+    FOREIGN KEY (id_revisor)     REFERENCES usuarios (id_usuario)
 );
+
+
+-- ==========================================
+-- 2. DML - INSERTS DE DATOS
+-- ==========================================
+
+-- ------------------------------------------
+-- 2.1 Roles
+-- ------------------------------------------
+INSERT IGNORE INTO roles (id_rol, nombre, descripcion, estado) VALUES
+    (1, 'Administrador', 'Control total del sistema',                         1),
+    (2, 'Editor',        'Crear, editar y eliminar con flujo de aprobación', 1),
+    (3, 'Observador',    'Solo lectura de activos',                           1);
+
+
+-- ------------------------------------------
+-- 2.3 Áreas
+-- ------------------------------------------
+INSERT IGNORE INTO areas (id_area, nombre, descripcion) VALUES
+    ('1',     'N/A',                          'No asignada'),
+    ('A-001', 'Laboratorio de Cómputo',       'Sistemas y programación'),
+    ('A-002', 'Taller de Electrónica',        'Prácticas y ensamblaje de circuitos'),
+    ('A-003', 'Almacén General',              'Bodega de equipos y materiales'),
+    ('A-004', 'Oficina Administrativa',       'Coordinación y jefatura de carrera'),
+    ('A-005', 'Sala de Juntas',               'Reuniones académicas y de personal'),
+    ('A-006', 'Laboratorio de Redes',         'Prácticas de telecomunicaciones y cableado'),
+    ('A-007', 'Cubículo de Profesores',       'Espacio docente compartido');
+
+-- ------------------------------------------
+-- 2.4 Presentaciones
+-- ------------------------------------------
+INSERT IGNORE INTO presentacion (id_presentacion, nombre) VALUES
+    ('P-CAJA',  'En caja'),
+    ('P-UNID',  'Unidad suelta'),
+    ('P-KIT',   'Paquete / Kit completo'),
+    ('P-BOLSA', 'En bolsa'),
+    ('P-GRAN',  'A granel'),
+    ('P-PAQ',   'Paquete sellado'),
+    ('P-ROLL',  'En rollo / carrete');
+
+-- ------------------------------------------
+-- 2.5 Líneas
+-- ------------------------------------------
+INSERT IGNORE INTO lineas (id_linea, nombre) VALUES
+    ('L-COMP', 'Computación y Sistemas'),
+    ('L-ELEC', 'Herramienta y Electrónica'),
+    ('L-RED',  'Redes y Telecomunicaciones'),
+    ('L-MOB',  'Mobiliario y Equipo de Oficina'),
+    ('L-AUD',  'Audio y Video'),
+    ('L-INST', 'Instrumentación y Medición');
+
+-- ------------------------------------------
+-- 2.6 Marcas
+-- ------------------------------------------
+INSERT IGNORE INTO marcas (id_marca, nombre) VALUES
+    ('M-DELL',   'Dell Technologies'),
+    ('M-FLUKE',  'Fluke Networks'),
+    ('M-HP',     'Hewlett-Packard'),
+    ('M-LENOVO', 'Lenovo'),
+    ('M-CISCO',  'Cisco Systems'),
+    ('M-SAMS',   'Samsung Electronics'),
+    ('M-STEREN', 'Steren'),
+    ('M-INTEL',  'Intel Corporation'),
+    ('M-ASUS',   'ASUS'),
+    ('M-APC',    'APC by Schneider Electric');
+
+-- ------------------------------------------
+-- 2.7 Proveedores
+-- ------------------------------------------
+INSERT IGNORE INTO provedores (id_provedor, nombre) VALUES
+    ('PRV-001', 'Soluciones Tecnológicas S.A. de C.V.'),
+    ('PRV-002', 'Electrónica Global Monterrey'),
+    ('PRV-003', 'Office Depot de México S.A. de C.V.'),
+    ('PRV-004', 'PC Extreme Informática S.A. de C.V.'),
+    ('PRV-005', 'Grupo Covix México'),
+    ('PRV-006', 'Electrónica y Componentes del Golfo'),
+    ('PRV-007', 'Distribuidora Tecnológica del Sureste');
+
+-- ------------------------------------------
+-- 2.8 Resguardantes
+-- ------------------------------------------
+INSERT IGNORE INTO resguardantes (id_resguardante, nombres, apellidos, estado) VALUES
+    (1, 'N/A',           '',                   1),
+    (2, 'Carlos Alberto', 'Morales Castillo',  1),
+    (3, 'Laura Elena',    'Sánchez Díaz',      1),
+    (4, 'Pedro',          'Jiménez Torres',    1),
+    (5, 'Ana Gabriela',   'Vázquez Ramírez',   1),
+    (6, 'Roberto',        'Cruz Mendoza',      1),
+    (7, 'Diana Patricia', 'Flores Gómez',      1);
+
+

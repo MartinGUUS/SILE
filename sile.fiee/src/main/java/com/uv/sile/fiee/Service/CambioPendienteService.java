@@ -3,6 +3,7 @@ package com.uv.sile.fiee.Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.uv.sile.fiee.Entitty.Activos;
 import com.uv.sile.fiee.Entitty.Asignaciones;
 import com.uv.sile.fiee.Entitty.CambioPendiente;
@@ -15,7 +16,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class CambioPendienteService {
@@ -72,6 +76,29 @@ public class CambioPendienteService {
 
         try {
             JsonNode json = objectMapper.readTree(cambio.getDatosJson());
+            Map<String, Object> estadoAnterior = new HashMap<>();
+            String idActivoObj = getTextFromJson(json, "idActivo");
+
+            switch (cambio.getTipoCambio()) {
+                case CREAR:
+                    // No hay estado anterior para una creación
+                    break;
+                case ACTUALIZAR:
+                case ELIMINAR:
+                    // Capturar estado anterior antes de aplicar cambios
+                    if (idActivoObj != null) {
+                        Optional<Activos> optAnterior = activosRepository.findById(idActivoObj);
+                        if (optAnterior.isPresent()) {
+                            estadoAnterior = objectMapper.convertValue(optAnterior.get(), Map.class);
+                            List<Asignaciones> asigsAnteriores = asignacionesRepository.findByFkActivo(idActivoObj);
+                            if (!asigsAnteriores.isEmpty()) {
+                                estadoAnterior.put("fkArea", asigsAnteriores.get(0).getFkArea());
+                                estadoAnterior.put("fkResguardante", asigsAnteriores.get(0).getFkResguardante());
+                            }
+                        }
+                    }
+                    break;
+            }
 
             switch (cambio.getTipoCambio()) {
                 case CREAR:
@@ -89,36 +116,40 @@ public class CambioPendienteService {
 
                     activosRepository.save(activo);
 
-                    // Manejar asignación (fkArea y fkResguardante vienen en el JSON pero NO son campos de Activos)
+                    // Manejar asignación (puede tener solo área, solo resguardante, ambos o ninguno)
                     String fkArea = getTextFromJson(json, "fkArea");
                     String fkResguardanteStr = getTextFromJson(json, "fkResguardante");
 
-                    if (fkArea != null && !fkArea.isEmpty() && fkResguardanteStr != null && !fkResguardanteStr.isEmpty()) {
-                        Integer fkResguardante;
-                        try {
-                            fkResguardante = Integer.parseInt(fkResguardanteStr);
-                        } catch (NumberFormatException e) {
-                            fkResguardante = null;
-                        }
+                    boolean hasArea = fkArea != null && !fkArea.isEmpty();
+                    boolean hasResguardante = fkResguardanteStr != null && !fkResguardanteStr.isEmpty();
 
-                        if (fkResguardante != null) {
-                            List<Asignaciones> asigs = asignacionesRepository.findByFkActivo(activo.getIdActivo());
-                            if (!asigs.isEmpty()) {
-                                Asignaciones asig = asigs.get(0);
-                                asig.setFkArea(fkArea);
-                                asig.setFkResguardante(fkResguardante);
-                                asig.setUltimoActualizadoPor(idRevisor);
-                                asignacionesRepository.save(asig);
-                            } else {
-                                Asignaciones newAsig = new Asignaciones();
-                                newAsig.setFkActivo(activo.getIdActivo());
-                                newAsig.setFkArea(fkArea);
-                                newAsig.setFkResguardante(fkResguardante);
-                                newAsig.setEstado("1");
-                                newAsig.setCreadoPor(idRevisor);
-                                newAsig.setUltimoActualizadoPor(idRevisor);
-                                asignacionesRepository.save(newAsig);
+                    if (hasArea || hasResguardante) {
+                        Integer fkResguardante = null;
+                        if (hasResguardante) {
+                            try {
+                                fkResguardante = Integer.parseInt(fkResguardanteStr);
+                            } catch (NumberFormatException e) {
+                                fkResguardante = null;
                             }
+                        }
+                        String effectiveArea = hasArea ? fkArea : null;
+
+                        List<Asignaciones> asigs = asignacionesRepository.findByFkActivo(activo.getIdActivo());
+                        if (!asigs.isEmpty()) {
+                            Asignaciones asig = asigs.get(0);
+                            asig.setFkArea(effectiveArea);
+                            asig.setFkResguardante(fkResguardante);
+                            asig.setUltimoActualizadoPor(idRevisor);
+                            asignacionesRepository.save(asig);
+                        } else {
+                            Asignaciones newAsig = new Asignaciones();
+                            newAsig.setFkActivo(activo.getIdActivo());
+                            newAsig.setFkArea(effectiveArea);
+                            newAsig.setFkResguardante(fkResguardante);
+                            newAsig.setEstado("1");
+                            newAsig.setCreadoPor(idRevisor);
+                            newAsig.setUltimoActualizadoPor(idRevisor);
+                            asignacionesRepository.save(newAsig);
                         }
                     }
 
@@ -148,6 +179,13 @@ public class CambioPendienteService {
                     activoEliminar.setEstado("3");
                     activosRepository.save(activoEliminar);
                     break;
+            }
+
+            // Guardar estado anterior en el JSON para que el frontend pueda mostrar el diff
+            if (!estadoAnterior.isEmpty()) {
+                ObjectNode root = (ObjectNode) objectMapper.readTree(cambio.getDatosJson());
+                root.set("_estadoAnterior", objectMapper.valueToTree(estadoAnterior));
+                cambio.setDatosJson(objectMapper.writeValueAsString(root));
             }
 
             cambio.setEstado(CambioPendiente.EstadoCambio.APROBADO);

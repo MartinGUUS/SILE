@@ -78,6 +78,8 @@ export class DesktopDashboardComponent implements OnInit {
   newActivo: Partial<Activo> = { estado: '1' };
   selectedFiles: File[] = [];
   isSaving = false;
+  idActivoExiste = signal(false);
+  private checkIdTimer: any;
 
   // Modal Edit Activo
   showModalEditActivo = false;
@@ -492,11 +494,28 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   // --- CREAR ACTIVO ---
+
+  onIdActivoChange(valor: string) {
+    if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
+    if (!valor || !valor.trim()) {
+      this.idActivoExiste.set(false);
+      return;
+    }
+    this.checkIdTimer = setTimeout(() => {
+      this.catalogoService.getById('activos', valor.trim()).subscribe({
+        next: () => this.idActivoExiste.set(true),
+        error: () => this.idActivoExiste.set(false)
+      });
+    }, 400);
+  }
+
   openCreateActivo() {
+    this.idActivoExiste.set(false);
+    if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.newActivo = {
       idActivo: '', nombre: '', descripcion: '', precio: undefined, existencias: 1, 
       garantia: '', nSerie: '', fkMarca: '', fkProvedor: '', fkLinea: '', fkPresentacion: '',
-      fkArea: '', fkResguardante: ''
+      fkArea: '', fkResguardante: undefined
     };
     this.selectedFiles = [];
     this.showModalCreateActivo = true;
@@ -513,6 +532,8 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   closeCreateActivo() {
+    this.idActivoExiste.set(false);
+    if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.showModalCreateActivo = false;
     this.selectedFiles = [];
   }
@@ -689,6 +710,8 @@ export class DesktopDashboardComponent implements OnInit {
 
   saveEditActivo() {
     const a = this.editActivoForm;
+    if (!a.fkArea) a.fkArea = '1';
+    if (!a.fkResguardante) a.fkResguardante = 1;
     if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
         !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
       this.mostrarNotificacion('Completa todos los campos requeridos *', true);
@@ -782,12 +805,12 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   private processAssignment(id: string, fkArea: string, fkResguardante: number | string) {
-    if (fkArea && fkResguardante) {
+    if (fkArea || fkResguardante) {
       if (this.assignmentActivo()) {
         const updatedAsig = {
           ...this.assignmentActivo(),
-          fkArea: fkArea,
-          fkResguardante: fkResguardante,
+          fkArea: fkArea || null,
+          fkResguardante: fkResguardante || null,
           ultimoActualizadoPor: this.miId
         };
         this.catalogoService.update('asignaciones', String(this.assignmentActivo()?.idAsignaciones), updatedAsig).subscribe({
@@ -797,8 +820,8 @@ export class DesktopDashboardComponent implements OnInit {
       } else {
         const newAsig = {
           fkActivo: id,
-          fkArea: fkArea,
-          fkResguardante: fkResguardante,
+          fkArea: fkArea || null,
+          fkResguardante: fkResguardante || null,
           creadoPor: this.miId,
           ultimoActualizadoPor: this.miId,
           estado: "1"
@@ -822,6 +845,8 @@ export class DesktopDashboardComponent implements OnInit {
 
   saveNuevoActivo() {
     const a = this.newActivo;
+    if (!a.fkArea) a.fkArea = '1';
+    if (!a.fkResguardante) (a as any).fkResguardante = 1;
     if (!a.nombre || !a.descripcion || a.precio == null ||
         !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
       this.mostrarNotificacion('Completa todos los campos requeridos *', true);
@@ -919,11 +944,11 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   private crearAsignacionFinal(idActivo: string, fkArea: string, fkResguardante: number | string) {
-    if (fkArea && fkResguardante) {
+    if (fkArea || fkResguardante) {
       const asignacionData = {
         fkActivo: idActivo,
-        fkArea: fkArea,
-        fkResguardante: fkResguardante,
+        fkArea: fkArea || null,
+        fkResguardante: fkResguardante || null,
         creadoPor: this.miId,
         ultimoActualizadoPor: this.miId,
         estado: "1"
@@ -1039,19 +1064,39 @@ export class DesktopDashboardComponent implements OnInit {
         next: (fotos) => { this.fotosActualesCambio.set(fotos); },
         error: () => { this.fotosActualesCambio.set([]); }
       });
-      if (cambio.tipoCambio === 'ACTUALIZAR') {
-        this.catalogoService.getById('activos', cambio.idEntidad).subscribe({
-          next: (activo) => { this.activoOriginal.set(activo); },
-          error: () => { this.activoOriginal.set(null); }
-        });
+      if (cambio.tipoCambio === 'ACTUALIZAR' || cambio.tipoCambio === 'ELIMINAR') {
+        // Para cambios ya procesados, usar _estadoAnterior guardado en el JSON
+        if (cambio.estado !== 'PENDIENTE' && this.datosJsonParseado?._estadoAnterior) {
+          const anterior = this.datosJsonParseado._estadoAnterior;
+          delete anterior._estadoAnterior;
+          this.activoOriginal.set(anterior);
+        } else if (cambio.tipoCambio === 'ACTUALIZAR') {
+          forkJoin({
+            activo: this.catalogoService.getById('activos', cambio.idEntidad).pipe(catchError(() => of(null))),
+            asignaciones: this.catalogoService.getAll(`asignaciones/activo/${cambio.idEntidad}`).pipe(catchError(() => of([])))
+          }).subscribe({
+            next: (result) => {
+              const activo = result.activo;
+              if (activo) {
+                if (result.asignaciones && result.asignaciones.length > 0) {
+                  (activo as any).fkArea = result.asignaciones[0].fkArea;
+                  (activo as any).fkResguardante = result.asignaciones[0].fkResguardante;
+                }
+                this.activoOriginal.set(activo);
+              }
+            },
+            error: () => { this.activoOriginal.set(null); }
+          });
+        }
       }
     }
   }
 
   campoCambiado(valorNuevo: any, campo: string): any {
-    if (!this.activoOriginal() || this.activoOriginal()[campo] == null) return {};
+    if (!this.activoOriginal()) return {};
     const original = this.activoOriginal()[campo];
     const nuevo = valorNuevo;
+    if (original == null && (nuevo == null || nuevo === '')) return {};
     if (original != nuevo) {
       return { color: '#dc2626', 'font-weight': '600' };
     }
@@ -1069,9 +1114,9 @@ export class DesktopDashboardComponent implements OnInit {
     };
     const cambiados: string[] = [];
     for (const [campo, label] of Object.entries(labels)) {
-      const original = this.activoOriginal()[campo];
-      const nuevo = this.datosJsonParseado[campo];
-      if (original != null && original != nuevo) {
+      const origVal = this.activoOriginal()[campo];
+      const newVal = this.datosJsonParseado[campo];
+      if (origVal != newVal && !(origVal == null && (newVal == null || newVal === ''))) {
         cambiados.push(label);
       }
     }
