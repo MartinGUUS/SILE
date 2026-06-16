@@ -37,11 +37,10 @@
 
       <!-- Scanner inline -->
       <ng-container *ngIf="isScanning()">
-        <div class="mob-section-title">Escáner</div>
-        <div class="mob-scanner-box">
-          <video id="video-preview" playsinline></video>
-          <div class="mob-scanner-debug">{{ debugMessage() }}</div>
-          <button class="mob-btn mob-btn-outline" (click)="stopScanning()" style="width:100%; margin-top:0.75rem">Detener escáner</button>
+        <div class="mob-scan-backdrop" (click)="stopScanning()">
+          <div class="mob-section-title">Escáner</div>
+          <video id="video-preview" class="mob-scan-video" autoplay playsinline (click)="$event.stopPropagation()"></video>
+          <button class="mob-scan-cancel" (click)="stopScanning()">✕ Detener escáner</button>
         </div>
       </ng-container>
 
@@ -259,6 +258,7 @@
           </div>
           <span *ngIf="idActivoExiste()" style="color: #dc2626; font-size: 0.75rem; font-weight: 600; display: block; margin-top: 0.25rem;">Este ID ya existe en el sistema</span>
           <video *ngIf="scanningForCreate()" id="create-video-preview" class="mob-scan-video" autoplay playsinline></video>
+          <button *ngIf="scanningForCreate()" class="mob-scan-cancel" (click)="stopCreateScan()">✕ Cancelar escaneo</button>
         </div>
         <div class="mob-form-group">
           <label>Nombre *</label>

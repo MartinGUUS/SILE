@@ -126,7 +126,7 @@ export class RegisterComponent {
 
       this.authService.register(userData).subscribe({
         next: (response) => {
-          this.successMessage.set('Registro exitoso. Tu cuenta ha sido creada como inactiva (estado 2). Contacta al administrador para ser activada.');
+          this.successMessage.set('Registro exitoso. Tu cuenta está inactiva. Contacta con un administrador para ser activada.');
           this.isSuccess.set(true);
           this.isLoading.set(false);
         },

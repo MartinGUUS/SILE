@@ -66,7 +66,7 @@ public class AuthController {
 
                 } catch (org.springframework.security.authentication.DisabledException e) {
                         return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                        .body(Map.of("error", "Tu cuenta está pendiente de aprobación por el administrador (Inactiva)."));
+                                        .body(Map.of("error", "Tu cuenta está inactiva. Contacta con un administrador para ser activada."));
                 } catch (BadCredentialsException e) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                                         .body(Map.of("error", "Correo o contraseña incorrectos"));
