@@ -15,7 +15,7 @@ public class ActivosServices {
     private ActivosRepository activosRepository;
 
     public List<Activos> findAll() {
-        return activosRepository.findByEstadoNot("3");
+        return activosRepository.findByEstadoNot("100");
     }
 
     public List<Activos> findByEstado(String estado) {

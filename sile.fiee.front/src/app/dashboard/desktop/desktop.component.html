@@ -25,27 +25,9 @@
               </a>
               </li>
               <li class="nav-item">
-                <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'provedores'" (click)="setTab('provedores')">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
-                  Proveedores
-                </a>
-              </li>
-              <li class="nav-item">
               <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'areas'" (click)="setTab('areas')">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
                 Áreas
-              </a>
-              </li>
-              <li class="nav-item">
-              <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'presentacion'" (click)="setTab('presentacion')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
-                Presentación
-              </a>
-              </li>
-              <li class="nav-item">
-              <a href="javascript:void(0)" class="nav-link" [class.active]="activeTab() === 'lineas'" (click)="setTab('lineas')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
-                Líneas
               </a>
               </li>
               <li class="nav-item">
@@ -91,7 +73,8 @@
         <header class="topbar">
           <div class="topbar-search">
             <input *ngIf="activeTab() === 'activos'" type="text" placeholder="Buscar por código, nombre o descripción..." class="search-input" [(ngModel)]="searchQuery" (input)="onSearchChange()">
-            <span *ngIf="activeTab() !== 'activos'" class="search-placeholder"></span>
+            <input *ngIf="activeTab() === 'cambios'" type="text" placeholder="Buscar en cambios..." class="search-input" [(ngModel)]="busquedaCambios" (input)="filtrarCambios()">
+            <span *ngIf="activeTab() !== 'activos' && activeTab() !== 'cambios'" class="search-placeholder"></span>
           </div>
           <div class="user-profile">
             <div class="avatar">{{ userName().charAt(0).toUpperCase() }}</div>
@@ -115,9 +98,12 @@
             <div class="page-header">
               <h1>Inventario de Objetos</h1>
               <div style="display: flex; gap: 0.75rem; align-items: center;">
-                <select class="filter-select" [(ngModel)]="filtroEstadoActivos" (change)="onFiltroActivosChange()">
-                  <option value="1">Activos</option>
-                  <option value="2">Inactivos</option>
+                <select class="filter-select" [(ngModel)]="filtroEstadoActivos" (ngModelChange)="onFiltroActivosChange()">
+                  <option value="1">Activo</option>
+                  <option value="3">Baja</option>
+                  <option value="5" *ngIf="miRol === 1">Eliminado</option>
+                  <option value="4">Nuevo</option>
+                  <option value="2">Sobrante</option>
                 </select>
                 <button class="primary-btn" *ngIf="miRol === 1 || miRol === 2" (click)="openCreateActivo()">Nuevo Activo</button>
               </div>
@@ -127,17 +113,15 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>No. Activo</th>
-                    <th>Nombre</th>
-                    <th>Descripción</th>
+                     <th>No. Activo</th>
+                     <th>Nombre</th>
+                     <th>Descripción</th>
                     <th>Estado</th>
-                    <th>Existencias</th>
-                    <th>Precio</th>
                     <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let item of dataActivos()" [ngStyle]="{'opacity': item.existencias === 0 ? '0.5' : '1', 'background': item.existencias === 0 ? '#f3f4f6' : 'inherit'}">
+                  <tr *ngFor="let item of dataActivos()">
                     <td>{{ item.idActivo }}</td>
                     <td>
                       <ng-container *ngIf="editingId !== item.idActivo">{{ item.nombre }}</ng-container>
@@ -154,37 +138,33 @@
                     <td>
                       <span class="status-badge" 
                         [class.active]="item.estado === '1'"
-                        [class.inactive]="item.estado === '2'">
-                        {{ item.estado === '1' ? 'Activo' : 'Inactivo' }}
+                        [class.sobrante]="item.estado === '2'"
+                        [class.baja]="item.estado === '3'"
+                        [class.nuevo]="item.estado === '4'"
+                        [class.eliminado]="item.estado === '5'">
+                        {{ getEstadoLabel(item.estado!) }}
                       </span>
                     </td>
-                    <td>{{ item.existencias ?? 'N/A' }}</td>
-                    <td>
-                      <ng-container *ngIf="editingId !== item.idActivo">{{ '$' + item.precio }}</ng-container>
-                      <ng-container *ngIf="editingId === item.idActivo">
-                        <input type="number" min="0" [(ngModel)]="editForm.precio" class="edit-input" style="width: 80px">
-                      </ng-container>
-                    </td>
-                    <td>
+                    <td style="display: flex; gap: 0.35rem;">
                       <ng-container *ngIf="editingId !== item.idActivo">
-                        <button class="action-btn" (click)="verDetalleActivo(item)">Ver</button>
-                        <button class="action-btn edit" *ngIf="miRol === 1 || miRol === 2" (click)="openEditActivo(item)">Editar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn activate" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
-                        <button *ngIf="item.estado === '1' && miRol === 1" class="action-btn danger" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 1" class="action-btn danger" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
-                        <!-- Editor: mismo flujo pero encolado -->
-                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn activate" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '1')">Activar</button>
-                        <button *ngIf="item.estado === '1' && miRol === 2" class="action-btn danger" (click)="cambiarEstadoGenerico('activos', item.idActivo!, '2')">Desactivar</button>
-                        <button *ngIf="item.estado === '2' && miRol === 2" class="action-btn danger" (click)="eliminarRegistro('activos', item.idActivo!)">Eliminar</button>
+                        <button class="action-btn" (click)="verDetalleActivo(item)" style="flex:1;">Ver</button>
+                        <button class="action-btn edit" *ngIf="miRol === 1 || miRol === 2" (click)="openEditActivo(item)" style="flex:1;">Editar</button>
+                        <select *ngIf="miRol === 1 || miRol === 2" [value]="item.estado" (change)="onEstadoChange($event, item)" style="flex:1;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem;background:var(--gray-50);cursor:pointer">
+                          <option value="1">Activo</option>
+                          <option value="3">Baja</option>
+                          <option value="5" *ngIf="miRol === 1">Eliminado</option>
+                          <option value="4">Nuevo</option>
+                          <option value="2">Sobrante</option>
+                        </select>
                       </ng-container>
                       <ng-container *ngIf="editingId === item.idActivo">
-                        <button class="action-btn success" (click)="saveEditCatalogo('activos', item.idActivo)">Guardar</button>
-                        <button class="action-btn danger" (click)="cancelEdit()">Cancelar</button>
+                        <button class="action-btn success" (click)="saveEditCatalogo('activos', item.idActivo)" style="flex:1;">Guardar</button>
+                        <button class="action-btn danger" (click)="cancelEdit()" style="flex:1;">Cancelar</button>
                       </ng-container>
                     </td>
                   </tr>
                   <tr *ngIf="dataActivos().length === 0">
-                    <td colspan="6" style="text-align: center; color: var(--gray-500)">Sin registros con ese filtro.</td>
+                    <td colspan="5" style="text-align: center; color: var(--gray-500)">Sin registros con ese filtro.</td>
                   </tr>
                 </tbody>
               </table>
@@ -205,8 +185,8 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Usuario</th>
+                     <th>ID</th>
+                     <th>Usuario</th>
                     <th>Correo</th>
                     <th>Rol</th>
                     <th>Estado</th>
@@ -298,7 +278,7 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>ID</th>
+                     <th>ID</th>
                     <th *ngIf="activeTab() !== 'resguardantes'">Nombre</th>
                     <th *ngIf="activeTab() === 'resguardantes'">Nombres</th>
                     <th *ngIf="activeTab() === 'resguardantes'">Apellidos</th>
@@ -369,15 +349,14 @@
                 <option value="procesados">Procesados</option>
               </select>
             </div>
-
-            <!-- Tabla PENDIENTES -->
-            <ng-container *ngIf="filtroCambios === 'pendientes'">
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>ID Activo</th>
+             <!-- Tabla PENDIENTES -->
+             <ng-container *ngIf="filtroCambios === 'pendientes'">
+               <div class="table-container">
+                 <table class="data-table">
+                   <thead>
+                     <tr>
+                       <th>Tipo</th>
+                       <th>ID Activo</th>
                       <th>Nombre</th>
                       <th>Fecha</th>
                       <th>Acciones</th>
@@ -406,14 +385,14 @@
               </div>
             </ng-container>
 
-            <!-- Tabla PROCESADOS -->
-            <ng-container *ngIf="filtroCambios === 'procesados'">
-              <div class="table-container">
-                <table class="data-table">
-                  <thead>
-                    <tr>
-                      <th>Tipo</th>
-                      <th>ID Activo</th>
+             <!-- Tabla PROCESADOS -->
+             <ng-container *ngIf="filtroCambios === 'procesados'">
+               <div class="table-container">
+                 <table class="data-table">
+                   <thead>
+                     <tr>
+                       <th>Tipo</th>
+                       <th>ID Activo</th>
                       <th>Solicitante</th>
                       <th>Resumen</th>
                       <th>Estado</th>
@@ -552,28 +531,19 @@
             </div>
             <div class="form-group">
               <label>Nombre *</label>
-              <input type="text" [(ngModel)]="newActivo.nombre" [disabled]="idActivoExiste()">
+              <input type="text" [(ngModel)]="newActivo.nombre" [disabled]="idActivoExiste()" placeholder="Nombre del activo">
             </div>
             <div class="form-group full-width">
               <label>Descripción *</label>
-              <input type="text" [(ngModel)]="newActivo.descripcion" [disabled]="idActivoExiste()">
+              <input type="text" [(ngModel)]="newActivo.descripcion" [disabled]="idActivoExiste()" placeholder="Descripción del activo">
             </div>
             <div class="form-group">
-              <label>Precio *</label>
-              <input type="number" min="0" [(ngModel)]="newActivo.precio" [disabled]="idActivoExiste()">
-            </div>
-            <!-- Existencias siempre será 1 por defecto -->
-            <div class="form-group">
-              <label>Existencias</label>
-              <input type="number" min="1" [(ngModel)]="newActivo.existencias" [disabled]="idActivoExiste()">
-            </div>
-            <div class="form-group">
-              <label>Garantía *</label>
-              <input type="text" [(ngModel)]="newActivo.garantia" [disabled]="idActivoExiste()">
+              <label>Modelo</label>
+              <input type="text" [(ngModel)]="newActivo.modelo" [disabled]="idActivoExiste()" placeholder="Modelo del activo">
             </div>
             <div class="form-group">
               <label>No. Serie *</label>
-              <input type="text" [(ngModel)]="newActivo.nSerie" [disabled]="idActivoExiste()">
+              <input type="text" [(ngModel)]="newActivo.nSerie" [disabled]="idActivoExiste()" placeholder="Ej: SN-DELL-001">
             </div>
             <div class="form-group">
               <label>Marca *</label>
@@ -582,21 +552,13 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Proveedor *</label>
-              <select [(ngModel)]="newActivo.fkProvedor" [disabled]="idActivoExiste()">
-                <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Línea *</label>
-              <select [(ngModel)]="newActivo.fkLinea" [disabled]="idActivoExiste()">
-                <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Presentación *</label>
-              <select [(ngModel)]="newActivo.fkPresentacion" [disabled]="idActivoExiste()">
-                <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
+              <label>Estado *</label>
+              <select [(ngModel)]="newActivo.estado" [disabled]="idActivoExiste()">
+                <option value="1">Activo</option>
+                <option value="3">Baja</option>
+                <option value="5" *ngIf="miRol === 1">Eliminado</option>
+                <option value="4">Nuevo</option>
+                <option value="2">Sobrante</option>
               </select>
             </div>
             <!-- Asignación -->
@@ -611,15 +573,25 @@
             </div>
             <div class="form-group">
               <label>Resguardante</label>
-              <select [(ngModel)]="newActivo.fkResguardante" [disabled]="idActivoExiste()">
+              <select [(ngModel)]="newActivo.fkResguardante" [disabled]="idActivoExiste()" (ngModelChange)="onCoresguardanteAuto()">
+                <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Corresguardante</label>
+              <select [(ngModel)]="newActivo.coresguardante" [disabled]="idActivoExiste() || !newActivo.fkResguardante || $any(newActivo.fkResguardante) == 1">
                 <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
               </select>
             </div>
             <div class="form-group full-width" style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin-top: 0.5rem;">
+              <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--gray-800);">Fotos</h3>
               <label>Importar Fotos (Opcional)</label>
               <input type="file" accept="image/*" (change)="onFileSelected($event)" multiple [disabled]="idActivoExiste()">
-              <div *ngIf="selectedFiles.length > 0" style="margin-top: 0.5rem; color: #059669; font-size: 0.8rem;">
-                {{ selectedFiles.length }} archivos seleccionados.
+              <div class="photos-gallery small" *ngIf="selectedFilesPreview().length > 0" style="margin-top: 0.75rem;">
+                <div class="photo-card" *ngFor="let preview of selectedFilesPreview(); let i = index">
+                  <img [src]="preview.url" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">
+                  <button class="delete-photo-btn" (click)="removeSelectedFile(i)" title="Quitar foto">✕</button>
+                </div>
               </div>
             </div>
           </div>
@@ -643,8 +615,8 @@
             </div>
             <div class="detail-item">
               <span class="detail-label">Estado</span>
-              <span class="status-badge" [class.active]="selectedActivo?.estado === '1'" [class.inactive]="selectedActivo?.estado === '2'">
-                {{ selectedActivo?.estado === '1' ? 'Activo' : 'Inactivo' }}
+              <span class="status-badge" [class.active]="selectedActivo?.estado === '1'" [class.sobrante]="selectedActivo?.estado === '2'" [class.baja]="selectedActivo?.estado === '3'" [class.nuevo]="selectedActivo?.estado === '4'" [class.eliminado]="selectedActivo?.estado === '5'">
+                {{ selectedActivo?.estado ? getEstadoLabel(selectedActivo!.estado!) : '' }}
               </span>
             </div>
             <div class="detail-item full-width" style="grid-column: span 2">
@@ -652,12 +624,8 @@
               <span class="detail-value">{{ selectedActivo?.descripcion }}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Existencias</span>
-              <span class="detail-value" [ngStyle]="{'color': (selectedActivo?.existencias ?? 1) === 0 ? '#dc2626' : 'inherit'}">{{ selectedActivo?.existencias ?? 'N/A' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Precio</span>
-              <span class="detail-value">{{ '$' + selectedActivo?.precio }}</span>
+              <span class="detail-label">Modelo</span>
+              <span class="detail-value">{{ selectedActivo?.modelo || 'N/A' }}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">No. Serie</span>
@@ -668,28 +636,16 @@
               <span class="detail-value">{{ getMarcaName(selectedActivo?.fkMarca) }}</span>
             </div>
             <div class="detail-item">
-              <span class="detail-label">Garantía</span>
-              <span class="detail-value">{{ selectedActivo?.garantia || 'N/A' }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Proveedor</span>
-              <span class="detail-value">{{ getProveedorName(selectedActivo?.fkProvedor) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Línea</span>
-              <span class="detail-value">{{ getLineaName(selectedActivo?.fkLinea) }}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Presentación</span>
-              <span class="detail-value">{{ getPresentacionName(selectedActivo?.fkPresentacion) }}</span>
-            </div>
-            <div class="detail-item">
               <span class="detail-label">Área Asignada</span>
               <span class="detail-value">{{ assignmentActivo() ? getAreaName(assignmentActivo()?.fkArea) : 'No asignado' }}</span>
             </div>
             <div class="detail-item">
               <span class="detail-label">Resguardante</span>
               <span class="detail-value">{{ assignmentActivo() ? getResguardanteName(assignmentActivo()?.fkResguardante!) : 'No asignado' }}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Corresguardante</span>
+              <span class="detail-value">{{ assignmentActivo()?.fkCoresguardante ? getResguardanteName(assignmentActivo()?.fkCoresguardante!) : 'No asignado' }}</span>
             </div>
           </div>
 
@@ -700,6 +656,22 @@
             </div>
             <div class="no-photos" *ngIf="fotosActivo().length === 0">
               No hay fotos registradas para este activo.
+            </div>
+          </div>
+
+          <h3>Observaciones</h3>
+          <div class="observaciones-section">
+            <div class="observacion-item" *ngFor="let o of observaciones()" style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid #f5f5f5;">
+              <div style="min-width: 0; flex: 1;">
+                <div style="font-size: 0.85rem; color: var(--gray-800); word-break: break-word; overflow-wrap: break-word; white-space: pre-wrap;">{{ o.texto }}</div>
+                <div style="font-size: 0.7rem; color: var(--gray-500);">{{ o.creadoEn | date:'dd/MM/yyyy HH:mm' }} - {{ getUserFullNameById(o.creadoPor) }}</div>
+              </div>
+              <button *ngIf="miRol === 1" class="action-btn danger" style="font-size: 0.65rem; padding: 0.2rem 0.5rem;" (click)="eliminarObservacion(o.idObservacion!)">✕</button>
+            </div>
+            <div *ngIf="observaciones().length === 0" style="color: var(--gray-500); font-size: 0.85rem; padding: 0.5rem 0;">Sin observaciones.</div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem;">
+              <textarea [(ngModel)]="nuevaObservacion" placeholder="Agregar observacion..." style="flex: 1; padding: 0.5rem 0.75rem; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 0.85rem; resize: vertical; min-height: 80px; font-family: inherit;" rows="4"></textarea>
+              <button class="action-btn success" (click)="agregarObservacion()" [disabled]="!nuevaObservacion.trim()">Agregar</button>
             </div>
           </div>
 
@@ -721,27 +693,19 @@
             </div>
             <div class="form-group">
               <label>Nombre *</label>
-              <input type="text" [(ngModel)]="editActivoForm.nombre">
+              <input type="text" [(ngModel)]="editActivoForm.nombre" placeholder="Nombre del activo">
             </div>
             <div class="form-group full-width">
               <label>Descripción *</label>
-              <input type="text" [(ngModel)]="editActivoForm.descripcion">
+              <input type="text" [(ngModel)]="editActivoForm.descripcion" placeholder="Descripción del activo">
             </div>
             <div class="form-group">
-              <label>Precio *</label>
-              <input type="number" min="0" [(ngModel)]="editActivoForm.precio">
-            </div>
-            <div class="form-group">
-              <label>Existencias</label>
-              <input type="number" min="0" [(ngModel)]="editActivoForm.existencias">
-            </div>
-            <div class="form-group">
-              <label>Garantía *</label>
-              <input type="text" [(ngModel)]="editActivoForm.garantia">
+              <label>Modelo</label>
+              <input type="text" [(ngModel)]="editActivoForm.modelo" placeholder="Modelo del activo">
             </div>
             <div class="form-group">
               <label>No. Serie *</label>
-              <input type="text" [(ngModel)]="editActivoForm.nSerie">
+              <input type="text" [(ngModel)]="editActivoForm.nSerie" placeholder="SN-...">
             </div>
             <div class="form-group">
               <label>Marca *</label>
@@ -750,22 +714,17 @@
               </select>
             </div>
             <div class="form-group">
-              <label>Proveedor *</label>
-              <select [(ngModel)]="editActivoForm.fkProvedor">
-                <option *ngFor="let p of listProveedores()" [value]="p.idProvedor">{{ p.nombre }}</option>
+              <label>Estado *</label>
+              <select [(ngModel)]="editActivoForm.estado">
+                <option value="1">Activo</option>
+                <option value="3">Baja</option>
+                <option value="5" *ngIf="miRol === 1">Eliminado</option>
+                <option value="4">Nuevo</option>
+                <option value="2">Sobrante</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>Línea *</label>
-              <select [(ngModel)]="editActivoForm.fkLinea">
-                <option *ngFor="let l of listLineas()" [value]="l.idLinea">{{ l.nombre }}</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Presentación *</label>
-              <select [(ngModel)]="editActivoForm.fkPresentacion">
-                <option *ngFor="let pr of listPresentacion()" [value]="pr.idPresentacion">{{ pr.nombre }}</option>
-              </select>
+            <div class="form-group full-width" style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin-top: 0.5rem;">
+              <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--gray-800);">Asignación</h3>
             </div>
             <div class="form-group">
               <label>Área</label>
@@ -775,9 +734,18 @@
             </div>
             <div class="form-group">
               <label>Resguardante</label>
-              <select [(ngModel)]="editActivoForm.fkResguardante">
+              <select [(ngModel)]="editActivoForm.fkResguardante" (ngModelChange)="onCoresguardanteAuto()">
                 <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
               </select>
+            </div>
+            <div class="form-group">
+              <label>Corresguardante</label>
+              <select [(ngModel)]="editActivoForm.coresguardante" [disabled]="!editActivoForm.fkResguardante || $any(editActivoForm.fkResguardante) == 1">
+                <option *ngFor="let r of listResguardantes()" [ngValue]="r.idResguardante">{{ r.nombres }} {{ r.apellidos }}</option>
+              </select>
+            </div>
+            <div class="form-group full-width" style="border-top: 1px dashed #cbd5e1; padding-top: 1rem; margin-top: 0.5rem;">
+              <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--gray-800);">Fotos</h3>
             </div>
             <div class="form-group full-width">
               <label>Fotos Actuales</label>
@@ -794,7 +762,12 @@
             <div class="form-group full-width">
               <label>Agregar nuevas fotos</label>
               <input type="file" (change)="onFileSelected($event)" accept="image/*" multiple>
-              <small *ngIf="selectedFiles.length > 0">{{ selectedFiles.length }} archivos seleccionados</small>
+              <div class="photos-gallery small" *ngIf="selectedFilesPreview().length > 0" style="margin-top: 0.75rem;">
+                <div class="photo-card" *ngFor="let preview of selectedFilesPreview(); let i = index">
+                  <img [src]="preview.url" alt="Preview" style="width: 100%; height: 100%; object-fit: cover;">
+                  <button class="delete-photo-btn" (click)="removeSelectedFile(i)" title="Quitar foto">✕</button>
+                </div>
+              </div>
             </div>
           </div>
           <div class="modal-actions">
@@ -822,10 +795,13 @@
             <span style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem; color: var(--gray-600);">
               <strong>Solicitante:</strong> {{ getUserNameById(cambioSeleccionado.idSolicitante) }}
             </span>
+            <span style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem; color: var(--gray-600);">
+              <strong>Solicitado:</strong> {{ cambioSeleccionado.creadoEn | date:'dd/MM/yyyy HH:mm' }}
+            </span>
             <span *ngIf="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" style="background: var(--gray-50); padding: 0.3rem 0.75rem; border-radius: 6px; font-size: 0.8rem;" 
-              [ngStyle]="{'color': datosJsonParseado?.estado === '3' ? '#dc2626' : (datosJsonParseado?.estado === '2' ? '#d97706' : '#059669')}">
+              [ngStyle]="{'color': datosJsonParseado?.estado === '3' ? '#dc2626' : (datosJsonParseado?.estado === '2' ? '#d97706' : (datosJsonParseado?.estado === '4' ? '#2563eb' : '#059669'))}">
               <strong>Nuevo estado:</strong>
-              {{ datosJsonParseado?.estado === '3' ? 'Eliminado' : (datosJsonParseado?.estado === '2' ? 'Inactivo' : (datosJsonParseado?.estado === '1' ? 'Activo' : 'N/A')) }}
+              {{ datosJsonParseado?.estado === '1' ? 'Activo' : (datosJsonParseado?.estado === '2' ? 'Sobrante' : (datosJsonParseado?.estado === '3' ? 'Baja' : (datosJsonParseado?.estado === '4' ? 'Nuevo' : 'N/A'))) }}
             </span>
             <span *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" class="status-badge"
               [class.active]="cambioSeleccionado.estado === 'APROBADO'"
@@ -849,41 +825,21 @@
               <label>Nombre *</label>
               <input disabled [value]="datosJsonParseado?.nombre || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.nombre, 'nombre')" />
             </div>
-            <div class="form-group">
-              <label>Precio *</label>
-              <input disabled [value]="datosJsonParseado?.precio ? ('$' + datosJsonParseado.precio) : 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.precio, 'precio')" />
-            </div>
             <div class="form-group full-width">
               <label>Descripción *</label>
               <input disabled [value]="datosJsonParseado?.descripcion || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.descripcion, 'descripcion')" />
+            </div>
+            <div class="form-group">
+              <label>Modelo</label>
+              <input disabled [value]="datosJsonParseado?.modelo || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.modelo, 'modelo')" />
             </div>
             <div class="form-group">
               <label>No. Serie *</label>
               <input disabled [value]="datosJsonParseado?.nSerie || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.nSerie, 'nSerie')" />
             </div>
             <div class="form-group">
-              <label>Garantía *</label>
-              <input disabled [value]="datosJsonParseado?.garantia || 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.garantia, 'garantia')" />
-            </div>
-            <div class="form-group">
-              <label>Existencias</label>
-              <input disabled [value]="datosJsonParseado?.existencias ?? 'N/A'" [ngStyle]="campoCambiado(datosJsonParseado?.existencias, 'existencias')" />
-            </div>
-            <div class="form-group">
               <label>Marca *</label>
               <input disabled [value]="getMarcaName(datosJsonParseado?.fkMarca)" [ngStyle]="campoCambiado(datosJsonParseado?.fkMarca, 'fkMarca')" />
-            </div>
-            <div class="form-group">
-              <label>Proveedor *</label>
-              <input disabled [value]="getProveedorName(datosJsonParseado?.fkProvedor)" [ngStyle]="campoCambiado(datosJsonParseado?.fkProvedor, 'fkProvedor')" />
-            </div>
-            <div class="form-group">
-              <label>Línea *</label>
-              <input disabled [value]="getLineaName(datosJsonParseado?.fkLinea)" [ngStyle]="campoCambiado(datosJsonParseado?.fkLinea, 'fkLinea')" />
-            </div>
-            <div class="form-group">
-              <label>Presentación *</label>
-              <input disabled [value]="getPresentacionName(datosJsonParseado?.fkPresentacion)" [ngStyle]="campoCambiado(datosJsonParseado?.fkPresentacion, 'fkPresentacion')" />
             </div>
           </div>
 
@@ -898,6 +854,10 @@
             <div class="form-group">
               <label>Resguardante</label>
               <input disabled [value]="getResguardanteName(datosJsonParseado?.fkResguardante)" [ngStyle]="campoCambiado(datosJsonParseado?.fkResguardante, 'fkResguardante')" />
+            </div>
+            <div class="form-group" *ngIf="datosJsonParseado?.fkCoresguardante">
+              <label>Corresguardante</label>
+              <input disabled [value]="getResguardanteName(datosJsonParseado?.fkCoresguardante)" [ngStyle]="campoCambiado(datosJsonParseado?.fkCoresguardante, 'fkCoresguardante')" />
             </div>
           </div>
 

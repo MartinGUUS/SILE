@@ -50,8 +50,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 // 6. Cargar datos del usuario desde la BD
                 UserDetails userDetails = userDetailsService.loadUserByUsername(correo);
 
-                // 7. Validar el token
+                // 7. Validar el token y que el usuario esté activo
                 if (jwtService.isTokenValid(token, userDetails.getUsername())) {
+
+                    if (!userDetails.isEnabled()) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Tu cuenta ha sido desactivada. Contacta con un administrador.\"}");
+                        return;
+                    }
 
                     // 8. Crear autenticación y establecerla en el contexto de seguridad
                     UsernamePasswordAuthenticationToken authToken =

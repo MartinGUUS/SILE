@@ -7,18 +7,19 @@ import { FormsModule } from '@angular/forms';
 import { CatalogoService } from '../../services/catalogo.service';
 import { UploadService } from '../../services/upload.service';
 import { CambiosService } from '../../services/cambios.service';
+import { ObservacionesService } from '../../services/observaciones.service';
+import { UsuariosService } from '../../services/usuarios.service';
 import { catchError, forkJoin, of } from 'rxjs';
 import { CambioPendiente } from '../../models/cambio-pendiente.model';
 
 import { Activo } from '../../models/activo.model';
 import { Foto } from '../../models/foto.model';
 import { Marca } from '../../models/marca.model';
-import { Proveedor } from '../../models/proveedor.model';
-import { Linea } from '../../models/linea.model';
-import { Presentacion } from '../../models/presentacion.model';
 import { Area } from '../../models/area.model';
 import { Resguardante } from '../../models/resguardante.model';
 import { Asignacion } from '../../models/asignacion.model';
+import { Observacion } from '../../models/observacion.model';
+import { Usuario } from '../../models/usuario.model';
 
 type MobileTab = 'inicio' | 'inventario' | 'cambios' | 'perfil';
 
@@ -34,6 +35,8 @@ export class MobileDashboardComponent implements OnDestroy {
   private catalogoService = inject(CatalogoService);
   private uploadService = inject(UploadService);
   private cambiosService = inject(CambiosService);
+  private observacionesService = inject(ObservacionesService);
+  private usuariosService = inject(UsuariosService);
   private router = inject(Router);
 
   activeTab = signal<MobileTab>('inicio');
@@ -57,6 +60,9 @@ export class MobileDashboardComponent implements OnDestroy {
   // --- Cambios (admin) ---
   dataCambios = signal<CambioPendiente[]>([]);
   dataProcesados = signal<CambioPendiente[]>([]);
+  allCambios: CambioPendiente[] = [];
+  allProcesados: CambioPendiente[] = [];
+  busquedaCambios = '';
   cargandoCambios = signal(false);
   filtroCambios: 'pendientes' | 'procesados' = 'pendientes';
   cantidadPendientes = signal(0);
@@ -72,11 +78,15 @@ export class MobileDashboardComponent implements OnDestroy {
   selectedActivo: Activo | null = null;
   detailFotos = signal<Foto[]>([]);
   detailAsignacion = signal<Asignacion | null>(null);
+  observaciones = signal<Observacion[]>([]);
+  nuevaObservacion = '';
+  dataUsuarios = signal<Usuario[]>([]);
 
   // --- Create form ---
   showCreateForm = false;
   newActivo: Partial<Activo> = {};
   selectedFiles: File[] = [];
+  selectedFilesPreview = signal<{file: File, url: string}[]>([]);
   isSaving = false;
   saveStep = signal('');
   idActivoExiste = signal(false);
@@ -97,9 +107,6 @@ export class MobileDashboardComponent implements OnDestroy {
 
   // --- Catalogs ---
   listMarcas = signal<Marca[]>([]);
-  listProveedores = signal<Proveedor[]>([]);
-  listLineas = signal<Linea[]>([]);
-  listPresentacion = signal<Presentacion[]>([]);
   listAreas = signal<Area[]>([]);
   listResguardantes = signal<Resguardante[]>([]);
 
@@ -120,6 +127,10 @@ export class MobileDashboardComponent implements OnDestroy {
     this.loadCatalogos();
     this.loadActivos();
     if (this.miRol === 1) this.cargarContadorPendientes();
+    this.usuariosService.getAllUsuarios().subscribe({
+      next: d => this.dataUsuarios.set(d),
+      error: () => {}
+    });
   }
 
   ngOnDestroy() {
@@ -141,10 +152,11 @@ export class MobileDashboardComponent implements OnDestroy {
       this.filtroEstado = '1';
       this.searchQuery = '';
     }
-    if (tab === 'cambios') this.filtroCambios = 'pendientes';
     this.activeTab.set(tab);
     if (tab === 'inventario') this.loadActivos();
     if (tab === 'cambios') {
+      this.filtroCambios = 'pendientes';
+      this.busquedaCambios = '';
       this.loadCambios();
       this.cargarContadorPendientes();
     }
@@ -162,16 +174,10 @@ export class MobileDashboardComponent implements OnDestroy {
   loadCatalogos() {
     forkJoin({
       marcas: this.catalogoService.getAll('marcas', '1').pipe(catchError(() => of([]))),
-      proveedores: this.catalogoService.getAll('provedores', '1').pipe(catchError(() => of([]))),
-      lineas: this.catalogoService.getAll('lineas', '1').pipe(catchError(() => of([]))),
-      presentacion: this.catalogoService.getAll('presentacion', '1').pipe(catchError(() => of([]))),
       areas: this.catalogoService.getAll('areas', '1').pipe(catchError(() => of([]))),
       resguardantes: this.catalogoService.getAll('resguardantes', '1').pipe(catchError(() => of([])))
     }).subscribe(d => {
       this.listMarcas.set(d.marcas);
-      this.listProveedores.set(d.proveedores);
-      this.listLineas.set(d.lineas);
-      this.listPresentacion.set(d.presentacion);
       this.listAreas.set(d.areas);
       this.listResguardantes.set(d.resguardantes);
     });
@@ -182,6 +188,9 @@ export class MobileDashboardComponent implements OnDestroy {
     this.cargandoActivos.set(true);
     this.catalogoService.getAll('activos', this.filtroEstado).subscribe({
       next: d => {
+        if (this.miRol !== 1) {
+          d = d.filter((a: any) => a.estado !== '5');
+        }
         this.allActivos = d;
         this.applySearch();
         this.cargandoActivos.set(false);
@@ -216,6 +225,8 @@ export class MobileDashboardComponent implements OnDestroy {
     this.selectedActivo = item;
     this.detailFotos.set([]);
     this.detailAsignacion.set(null);
+    this.observaciones.set([]);
+    this.nuevaObservacion = '';
     this.showDetail = true;
 
     this.catalogoService.getAll(`fotos/activo/${item.idActivo}`).subscribe({
@@ -228,6 +239,7 @@ export class MobileDashboardComponent implements OnDestroy {
       },
       error: () => {}
     });
+    this.cargarObservaciones();
   }
 
   openImagePreview(url: string) {
@@ -239,18 +251,6 @@ export class MobileDashboardComponent implements OnDestroy {
     const m = this.listMarcas().find(x => x.idMarca === id);
     return m?.nombre || (id || 'N/A');
   }
-  getProveedorName(id: string | undefined): string {
-    const p = this.listProveedores().find(x => x.idProvedor === id);
-    return p?.nombre || (id || 'N/A');
-  }
-  getLineaName(id: string | undefined): string {
-    const l = this.listLineas().find(x => x.idLinea === id);
-    return l?.nombre || (id || 'N/A');
-  }
-  getPresentacionName(id: string | undefined): string {
-    const pr = this.listPresentacion().find(x => x.idPresentacion === id);
-    return pr?.nombre || (id || 'N/A');
-  }
   getAreaName(id: string | undefined): string {
     const a = this.listAreas().find(x => x.idArea === id);
     return a?.nombre || (id || 'N/A');
@@ -259,6 +259,12 @@ export class MobileDashboardComponent implements OnDestroy {
     if (!id) return 'N/A';
     const r = this.listResguardantes().find(x => String(x.idResguardante) === String(id));
     return r ? `${r.nombres} ${r.apellidos}` : `ID: ${id}`;
+  }
+
+  getUserFullNameById(id: number | undefined): string {
+    if (!id) return '—';
+    const u = this.dataUsuarios().find(user => user.idUsuario === id);
+    return u ? `${u.nombre}${u.apellido ? ' ' + u.apellido : ''}` : `ID ${id}`;
   }
 
   // ===================== CREATE =====================
@@ -277,15 +283,29 @@ export class MobileDashboardComponent implements OnDestroy {
     }, 400);
   }
 
+  onCoresguardanteAuto() {
+    const fkResguardante = this.showCreateForm
+      ? this.newActivo.fkResguardante
+      : this.editActivoForm.fkResguardante;
+    if (!fkResguardante || fkResguardante == 1) {
+      if (this.showCreateForm) {
+        (this.newActivo as any).coresguardante = 1;
+      } else {
+        this.editActivoForm.coresguardante = 1;
+      }
+    }
+  }
+
   openCreateForm() {
     this.idActivoExiste.set(false);
     if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.newActivo = {
-      idActivo: '', nombre: '', descripcion: '', precio: undefined, existencias: 1,
-      garantia: '', nSerie: '', fkMarca: '', fkProvedor: '', fkLinea: '', fkPresentacion: '',
-      fkArea: '', fkResguardante: undefined, estado: '1'
+      idActivo: '', nombre: '', descripcion: '', modelo: '',
+      nSerie: '', fkMarca: '',
+      fkArea: '', fkResguardante: undefined, coresguardante: undefined, estado: undefined
     };
     this.selectedFiles = [];
+    this.clearSelectedFilesPreview();
     this.showCreateForm = true;
     this.loadCatalogos();
   }
@@ -358,6 +378,7 @@ export class MobileDashboardComponent implements OnDestroy {
     if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.showCreateForm = false;
     this.selectedFiles = [];
+    this.clearSelectedFilesPreview();
   }
 
   onFilesSelected(event: any) {
@@ -370,32 +391,43 @@ export class MobileDashboardComponent implements OnDestroy {
         return;
       }
       this.selectedFiles = [...this.selectedFiles, ...files];
+      const previews = files.map(file => ({ file, url: URL.createObjectURL(file) }));
+      this.selectedFilesPreview.set([...this.selectedFilesPreview(), ...previews]);
       event.target.value = '';
     }
+  }
+
+  removeSelectedFile(index: number) {
+    URL.revokeObjectURL(this.selectedFilesPreview()[index].url);
+    this.selectedFilesPreview.update(arr => arr.filter((_, i) => i !== index));
+    this.selectedFiles.splice(index, 1);
+  }
+
+  private clearSelectedFilesPreview() {
+    for (const p of this.selectedFilesPreview()) {
+      URL.revokeObjectURL(p.url);
+    }
+    this.selectedFilesPreview.set([]);
   }
 
   saveNuevoActivo() {
     const a: any = this.newActivo;
     if (!a.fkArea) a.fkArea = '1';
     if (!a.fkResguardante) a.fkResguardante = 1;
-    if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
-        !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
+    if (!a.coresguardante) (a as any).coresguardante = 1;
+    if (!a.estado) {
+      this.showToast('Selecciona un estado', true);
+      return;
+    }
+    if (!a.idActivo || !a.nombre || !a.descripcion ||
+        !a.nSerie || !a.fkMarca) {
       this.showToast('Completa todos los campos requeridos *', true);
       return;
     }
-    if (a.precio < 0) {
-      this.showToast('El precio no puede ser negativo.', true);
-      return;
-    }
-    if (a.existencias != null && a.existencias < 1) {
-      this.showToast('Las existencias deben ser mínimo 1.', true);
-      return;
-    }
-
     if (this.miRol === 2) {
       this.saveStep.set('Subiendo fotos...');
       this.uploadFilesForEditor(filenames => {
-        const payload = { ...this.newActivo, estado: '1', _fotosFilenames: filenames, _fotosEliminadas: [] };
+        const payload = { ...this.newActivo, _fotosFilenames: filenames, _fotosEliminadas: [], fkCoresguardante: this.newActivo.coresguardante };
         const cambio: CambioPendiente = {
           tipoCambio: 'CREAR', entidad: 'activos',
           datosJson: JSON.stringify(payload)
@@ -444,14 +476,14 @@ export class MobileDashboardComponent implements OnDestroy {
               error: () => uploadNext(index + 1)
             });
           } else {
-            this.crearAsignacionFinal(idActivo, fkArea, fkResguardante);
+            this.crearAsignacionFinal(idActivo, fkArea, fkResguardante, this.newActivo.coresguardante);
           }
         };
 
         if (this.selectedFiles.length > 0) {
           uploadNext(0);
         } else {
-          this.crearAsignacionFinal(idActivo, fkArea, fkResguardante);
+          this.crearAsignacionFinal(idActivo, fkArea, fkResguardante, this.newActivo.coresguardante);
         }
       },
       error: (err) => {
@@ -463,11 +495,12 @@ export class MobileDashboardComponent implements OnDestroy {
     });
   }
 
-  private crearAsignacionFinal(idActivo: string, fkArea: string, fkResguardante: string) {
+  private crearAsignacionFinal(idActivo: string, fkArea: string, fkResguardante: string, fkCoresguardante: any) {
     if (fkArea || fkResguardante) {
       this.saveStep.set('Guardando asignación...');
       this.catalogoService.create('asignaciones', {
         fkActivo: idActivo, fkArea: fkArea || null, fkResguardante: fkResguardante || null,
+        fkCoresguardante: fkCoresguardante || null,
         creadoPor: this.miId, ultimoActualizadoPor: this.miId, estado: '1'
       }).subscribe({ next: () => this.finalizeSave(), error: () => this.finalizeSave() });
     } else {
@@ -493,6 +526,7 @@ export class MobileDashboardComponent implements OnDestroy {
     this.fotosAEliminar = [];
     this.editFotos.set([]);
     this.editAsignacion.set(null);
+    this.clearSelectedFilesPreview();
     this.showEditForm = true;
 
     setTimeout(() => {
@@ -501,24 +535,21 @@ export class MobileDashboardComponent implements OnDestroy {
         asignaciones: this.catalogoService.getAll(`asignaciones/activo/${item.idActivo}`).pipe(catchError(() => of([]))),
         catalogos: forkJoin({
           marcas: this.catalogoService.getAll('marcas', '1').pipe(catchError(() => of([]))),
-          proveedores: this.catalogoService.getAll('provedores', '1').pipe(catchError(() => of([]))),
-          lineas: this.catalogoService.getAll('lineas', '1').pipe(catchError(() => of([]))),
-          presentacion: this.catalogoService.getAll('presentacion', '1').pipe(catchError(() => of([]))),
           areas: this.catalogoService.getAll('areas', '1').pipe(catchError(() => of([]))),
           resguardantes: this.catalogoService.getAll('resguardantes', '1').pipe(catchError(() => of([])))
         })
       }).subscribe(result => {
         this.editFotos.set(result.fotos.filter((f: Foto) => !this.fotosAEliminar.includes(f.idFoto!)));
         this.listMarcas.set(result.catalogos.marcas);
-        this.listProveedores.set(result.catalogos.proveedores);
-        this.listLineas.set(result.catalogos.lineas);
-        this.listPresentacion.set(result.catalogos.presentacion);
         this.listAreas.set(result.catalogos.areas);
         this.listResguardantes.set(result.catalogos.resguardantes);
         if (result.asignaciones && result.asignaciones.length > 0) {
           this.editAsignacion.set(result.asignaciones[0]);
           if (!this.editActivoForm.fkArea) this.editActivoForm.fkArea = result.asignaciones[0].fkArea;
           if (!this.editActivoForm.fkResguardante) this.editActivoForm.fkResguardante = result.asignaciones[0].fkResguardante;
+          this.editActivoForm.coresguardante = result.asignaciones[0].fkCoresguardante || undefined;
+          if (!this.editActivoForm.fkResguardante || this.editActivoForm.fkResguardante === 1)
+            this.editActivoForm.coresguardante = 1;
         }
       });
     });
@@ -531,6 +562,7 @@ export class MobileDashboardComponent implements OnDestroy {
     this.fotosAEliminar = [];
     this.editFotos.set([]);
     this.saveStep.set('');
+    this.clearSelectedFilesPreview();
   }
 
   deleteEditFoto(idFoto: number) {
@@ -542,25 +574,17 @@ export class MobileDashboardComponent implements OnDestroy {
     const a = this.editActivoForm;
     if (!a.fkArea) a.fkArea = '1';
     if (!a.fkResguardante) a.fkResguardante = 1;
-    if (!a.nombre || !a.descripcion || a.precio == null ||
-        !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
+    if (!a.coresguardante) a.coresguardante = 1;
+    if (!a.nombre || !a.descripcion ||
+        !a.nSerie || !a.fkMarca) {
       this.showToast('Completa todos los campos requeridos *', true);
       return;
     }
-    if (a.precio < 0) {
-      this.showToast('El precio no puede ser negativo.', true);
-      return;
-    }
-    if (a.existencias != null && a.existencias < 0) {
-      this.showToast('Las existencias no pueden ser negativas.', true);
-      return;
-    }
-
     if (this.miRol === 2) {
       this.saveStep.set('Subiendo fotos...');
       this.uploadFilesForEditor(filenames => {
         const id = this.editActivoForm.idActivo as string;
-        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar };
+        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar, fkCoresguardante: this.editActivoForm.coresguardante };
         const cambio: CambioPendiente = {
           tipoCambio: 'ACTUALIZAR', entidad: 'activos', idEntidad: id,
           datosJson: JSON.stringify(payload)
@@ -627,7 +651,7 @@ export class MobileDashboardComponent implements OnDestroy {
   private processAssignment(id: string, fkArea: string, fkResguardante: number | string) {
     if (fkArea || fkResguardante) {
       if (this.editAsignacion()) {
-        const updated = { ...this.editAsignacion(), fkArea: fkArea || null, fkResguardante: fkResguardante || null, ultimoActualizadoPor: this.miId };
+        const updated = { ...this.editAsignacion(), fkArea: fkArea || null, fkResguardante: fkResguardante || null, fkCoresguardante: this.editActivoForm.coresguardante || null, ultimoActualizadoPor: this.miId };
         this.catalogoService.update('asignaciones', String(this.editAsignacion()?.idAsignaciones), updated).subscribe({
           next: () => this.finalizeEdit(),
           error: () => this.finalizeEdit()
@@ -635,6 +659,7 @@ export class MobileDashboardComponent implements OnDestroy {
       } else {
         this.catalogoService.create('asignaciones', {
           fkActivo: id, fkArea: fkArea || null, fkResguardante: fkResguardante || null,
+          fkCoresguardante: this.editActivoForm.coresguardante || null,
           creadoPor: this.miId, ultimoActualizadoPor: this.miId, estado: '1'
         }).subscribe({ next: () => this.finalizeEdit(), error: () => this.finalizeEdit() });
       }
@@ -670,6 +695,17 @@ export class MobileDashboardComponent implements OnDestroy {
     });
   }
 
+  onEstadoChange(event: Event, item: any) {
+    const select = event.target as HTMLSelectElement;
+    const nuevoEstado = select.value;
+    if (item.estado === nuevoEstado) return;
+    if (nuevoEstado === '5' && !confirm('¿Estás seguro de que deseas eliminar este activo?')) {
+      select.value = item.estado;
+      return;
+    }
+    this.cambiarEstadoActivo(item, nuevoEstado);
+  }
+
   eliminarActivo(item: Activo) {
     if (this.miRol === 2) {
       const cambio: CambioPendiente = {
@@ -683,9 +719,53 @@ export class MobileDashboardComponent implements OnDestroy {
       return;
     }
     this.catalogoService.cambiarEstado('activos', item.idActivo!, '3').subscribe({
-      next: () => { this.loadActivos(); this.showToast('Activo eliminado'); },
+      next: () => { this.loadActivos(); this.showToast('Activo dado de baja'); },
       error: () => this.showToast('Error al eliminar', true)
     });
+  }
+
+  cargarObservaciones() {
+    if (!this.selectedActivo?.idActivo) return;
+    this.observacionesService.getAllByActivo(this.selectedActivo.idActivo).subscribe({
+      next: data => this.observaciones.set(data),
+      error: () => this.observaciones.set([])
+    });
+  }
+
+  agregarObservacion() {
+    if (!this.nuevaObservacion.trim() || !this.selectedActivo?.idActivo) return;
+    const data = {
+      fkActivo: this.selectedActivo.idActivo,
+      texto: this.nuevaObservacion.trim(),
+      creadoPor: this.miId
+    };
+    this.observacionesService.create(data).subscribe({
+      next: () => {
+        this.nuevaObservacion = '';
+        this.cargarObservaciones();
+      },
+      error: () => this.showToast('Error al agregar observacion', true)
+    });
+  }
+
+  eliminarObservacion(id: number) {
+    if (!confirm('Eliminar esta observacion?')) return;
+    this.observacionesService.delete(id).subscribe({
+      next: () => this.cargarObservaciones(),
+      error: () => this.showToast('Error al eliminar observacion', true)
+    });
+  }
+
+  getEstadoLabel(estado: string): string {
+    switch (estado) {
+      case '1': return 'Activo';
+      case '2': return 'Sobrante';
+      case '3': return 'Baja';
+      case '4': return 'Nuevo';
+      case '5': return 'Eliminado';
+      case '100': return 'Borrado';
+      default: return 'Desconocido';
+    }
   }
 
   // ===================== SCANNER =====================
@@ -778,12 +858,12 @@ export class MobileDashboardComponent implements OnDestroy {
     this.cargandoCambios.set(true);
     if (this.filtroCambios === 'procesados') {
       this.cambiosService.listarProcesados().subscribe({
-        next: d => { this.dataProcesados.set(d); this.cargandoCambios.set(false); },
+        next: d => { this.allProcesados = d; this.cargandoCambios.set(false); this.filtrarCambios(); },
         error: () => this.cargandoCambios.set(false)
       });
     } else {
       this.cambiosService.listarPendientes().subscribe({
-        next: d => { this.dataCambios.set(d); this.cargandoCambios.set(false); },
+        next: d => { this.allCambios = d; this.cargandoCambios.set(false); this.filtrarCambios(); },
         error: () => this.cargandoCambios.set(false)
       });
     }
@@ -791,6 +871,31 @@ export class MobileDashboardComponent implements OnDestroy {
 
   onFiltroCambiosChange() {
     this.loadCambios();
+  }
+
+  filtrarCambios() {
+    const q = this.busquedaCambios.toLowerCase().trim();
+    if (this.filtroCambios === 'procesados') {
+      if (!q) { this.dataProcesados.set(this.allProcesados); }
+      else {
+        this.dataProcesados.set(this.allProcesados.filter(c =>
+          (c.idEntidad && c.idEntidad.toLowerCase().includes(q)) ||
+          (c.idSolicitante && String(c.idSolicitante).includes(q)) ||
+          (c.tipoCambio && c.tipoCambio.toLowerCase().includes(q)) ||
+          (c.datosJson && c.datosJson.toLowerCase().includes(q))
+        ));
+      }
+    } else {
+      if (!q) { this.dataCambios.set(this.allCambios); }
+      else {
+        this.dataCambios.set(this.allCambios.filter(c =>
+          (c.idEntidad && c.idEntidad.toLowerCase().includes(q)) ||
+          (c.idSolicitante && String(c.idSolicitante).includes(q)) ||
+          (c.tipoCambio && c.tipoCambio.toLowerCase().includes(q)) ||
+          (c.datosJson && c.datosJson.toLowerCase().includes(q))
+        ));
+      }
+    }
   }
 
   verDetalleCambio(cambio: CambioPendiente) {
@@ -822,6 +927,7 @@ export class MobileDashboardComponent implements OnDestroy {
                 if (result.asignaciones && result.asignaciones.length > 0) {
                   (activo as any).fkArea = result.asignaciones[0].fkArea;
                   (activo as any).fkResguardante = result.asignaciones[0].fkResguardante;
+                  (activo as any).fkCoresguardante = result.asignaciones[0].fkCoresguardante;
                 }
                 this.activoOriginal.set(activo);
               }
@@ -849,10 +955,8 @@ export class MobileDashboardComponent implements OnDestroy {
   resumenCambiosTexto(): string {
     if (!this.activoOriginal() || !this.datosJsonParseado || this.cambioSeleccionado?.tipoCambio !== 'ACTUALIZAR') return '';
     const labels: Record<string, string> = {
-      nombre: 'nombre', descripcion: 'descripción', precio: 'precio',
-      existencias: 'existencias', garantia: 'garantía', nSerie: 'No. Serie',
-      fkMarca: 'marca', fkProvedor: 'proveedor', fkLinea: 'línea',
-      fkPresentacion: 'presentación', fkArea: 'área', fkResguardante: 'resguardante',
+      nombre: 'nombre', descripcion: 'descripción', modelo: 'modelo', nSerie: 'No. Serie',
+      fkMarca: 'marca', fkArea: 'área', fkResguardante: 'resguardante', fkCoresguardante: 'corresguardante',
       estado: 'estado'
     };
     const cambiados: string[] = [];

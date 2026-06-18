@@ -9,19 +9,18 @@ import { UsuariosService } from '../../services/usuarios.service';
 import { CatalogoService } from '../../services/catalogo.service';
 import { UploadService } from '../../services/upload.service';
 import { CambiosService } from '../../services/cambios.service';
+import { ObservacionesService } from '../../services/observaciones.service';
 import { CambioPendiente } from '../../models/cambio-pendiente.model';
 import { Activo } from '../../models/activo.model';
 import { Usuario } from '../../models/usuario.model';
 import { Marca } from '../../models/marca.model';
-import { Proveedor } from '../../models/proveedor.model';
-import { Linea } from '../../models/linea.model';
-import { Presentacion } from '../../models/presentacion.model';
 import { Area } from '../../models/area.model';
 import { Resguardante } from '../../models/resguardante.model';
 import { Foto } from '../../models/foto.model';
 import { Asignacion } from '../../models/asignacion.model';
+import { Observacion } from '../../models/observacion.model';
 
-type TabType = 'activos' | 'usuarios' | 'areas' | 'presentacion' | 'lineas' | 'marcas' | 'provedores' | 'resguardantes' | 'cambios' | 'mis-solicitudes';
+type TabType = 'activos' | 'usuarios' | 'areas' | 'marcas' | 'resguardantes' | 'cambios' | 'mis-solicitudes';
 
 @Component({
   selector: 'app-desktop-dashboard',
@@ -37,6 +36,7 @@ export class DesktopDashboardComponent implements OnInit {
   private uploadService = inject(UploadService);
   private router = inject(Router);
   private cambiosService = inject(CambiosService);
+  private observacionesService = inject(ObservacionesService);
   activeTab = signal<TabType>('activos');
 
   // Data local
@@ -61,6 +61,9 @@ export class DesktopDashboardComponent implements OnInit {
   dataProcesados = signal<CambioPendiente[]>([]);
   dataSolicitudes = signal<CambioPendiente[]>([]);
   filtroCambios = 'pendientes';
+  busquedaCambios = '';
+  allCambios: CambioPendiente[] = [];
+  allProcesados: CambioPendiente[] = [];
   cambioSeleccionado: CambioPendiente | null = null;
   datosJsonParseado: any = null;
   comentarioRechazo = '';
@@ -75,11 +78,13 @@ export class DesktopDashboardComponent implements OnInit {
 
   // Modal Create Activo
   showModalCreateActivo = false;
-  newActivo: Partial<Activo> = { estado: '1' };
+  newActivo: Partial<Activo> = { estado: '4' };
   selectedFiles: File[] = [];
+  selectedFilesPreview = signal<{file: File, url: string}[]>([]);
   isSaving = false;
   idActivoExiste = signal(false);
   private checkIdTimer: any;
+  coresguardante: any = null;
 
   // Modal Edit Activo
   showModalEditActivo = false;
@@ -89,9 +94,6 @@ export class DesktopDashboardComponent implements OnInit {
 
   // Listas de catálogos como señales para reactividad garantizada
   listMarcas = signal<Marca[]>([]);
-  listProveedores = signal<Proveedor[]>([]);
-  listLineas = signal<Linea[]>([]);
-  listPresentacion = signal<Presentacion[]>([]);
   listAreas = signal<Area[]>([]);
   listResguardantes = signal<Resguardante[]>([]);
 
@@ -100,7 +102,7 @@ export class DesktopDashboardComponent implements OnInit {
   newCatalogo: any = {};
   isSavingCatalogo = false;
 
-  // Filtro estado activos (1=activos, 2=inactivos)
+  // Filtro estado activos (1=Activo, 2=Sobrante, 3=Baja, 4=Nuevo)
   filtroEstadoActivos = '1';
 
   // Búsqueda de activos
@@ -118,6 +120,9 @@ export class DesktopDashboardComponent implements OnInit {
   selectedActivo: Activo | null = null;
   fotosActivo = signal<Foto[]>([]);
   fotosAEliminar: number[] = [];
+  observaciones = signal<Observacion[]>([]);
+  showObservaciones = signal(false);
+  nuevaObservacion = '';
 
   // Modal Vista Previa Imagen
   showModalImagePreview = false;
@@ -128,6 +133,10 @@ export class DesktopDashboardComponent implements OnInit {
     this.miRol = this.authService.getFkRol();
     this.userName.set(localStorage.getItem('userFullName') || localStorage.getItem('userName') || 'Usuario');
     this.loadDataForTab();
+    this.usuariosService.getAllUsuarios().subscribe({
+      next: d => this.dataUsuarios.set(d),
+      error: () => {}
+    });
     
     if (this.miRol === 1) {
       this.loadCatalogosParaActivos().subscribe(data => this.updateCatalogLists(data));
@@ -188,9 +197,6 @@ export class DesktopDashboardComponent implements OnInit {
     console.log('[DEBUG] Recargando catálogos para el formulario de Activos...');
     return forkJoin({
       marcas: this.catalogoService.getAll('marcas', '1').pipe(catchError(() => of([]))),
-      proveedores: this.catalogoService.getAll('provedores', '1').pipe(catchError(() => of([]))),
-      lineas: this.catalogoService.getAll('lineas', '1').pipe(catchError(() => of([]))),
-      presentacion: this.catalogoService.getAll('presentacion', '1').pipe(catchError(() => of([]))),
       areas: this.catalogoService.getAll('areas', '1').pipe(catchError(() => of([]))),
       resguardantes: this.catalogoService.getAll('resguardantes', '1').pipe(catchError(() => of([])))
     });
@@ -198,9 +204,6 @@ export class DesktopDashboardComponent implements OnInit {
 
   updateCatalogLists(data: any) {
     this.listMarcas.set(data.marcas);
-    this.listProveedores.set(data.proveedores);
-    this.listLineas.set(data.lineas);
-    this.listPresentacion.set(data.presentacion);
     this.listAreas.set(data.areas);
     this.listResguardantes.set(data.resguardantes);
     console.log('[DEBUG] Catálogos actualizados:', {
@@ -220,7 +223,7 @@ export class DesktopDashboardComponent implements OnInit {
     if (tab === 'usuarios') this.filtroEstadoUsuarios = '1';
     if (tab === 'activos') this.filtroEstadoActivos = '1';
     if (this.isCatalogoTab(tab)) this.filtroEstadoCatalogo[tab] = '1';
-    if (tab === 'cambios') this.filtroCambios = 'pendientes';
+    if (tab === 'cambios') { this.filtroCambios = 'pendientes'; this.busquedaCambios = ''; }
     
     this.activeTab.set(tab);
     if (tab === 'cambios') {
@@ -233,11 +236,11 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   isCatalogoTab(tab: TabType): boolean {
-    return ['areas', 'presentacion', 'lineas', 'marcas', 'provedores', 'resguardantes'].includes(tab);
+    return ['areas', 'marcas', 'resguardantes'].includes(tab);
   }
 
   getDictId(item: any): string {
-    const id = item.idMarca || item.idLinea || item.idProvedor || item.idArea || item.idPresentacion || item.idResguardante;
+    const id = item.idMarca || item.idArea || item.idResguardante;
     return id !== undefined && id !== null ? String(id) : '';
   }
 
@@ -246,13 +249,19 @@ export class DesktopDashboardComponent implements OnInit {
     if (tab === 'usuarios') {
       if (this.miRol === 1) {
         this.usuariosService.getAllUsuarios().subscribe({
-          next: d => this.dataUsuarios.set(d.filter(u => u.estado === this.filtroEstadoUsuarios)),
+          next: d => {
+            let filtered = d.filter(u => u.estado === this.filtroEstadoUsuarios);
+            this.dataUsuarios.set(filtered);
+          },
           error: console.error
         });
       }
     } else if (tab === 'activos') {
       this.catalogoService.getAll('activos', this.filtroEstadoActivos).subscribe({
         next: d => {
+          if (this.miRol !== 1) {
+            d = d.filter((a: any) => a.estado !== '5');
+          }
           this.allActivos = d;
           this.applySearch();
         },
@@ -285,14 +294,44 @@ export class DesktopDashboardComponent implements OnInit {
     this.cargandoCambios = true;
     if (this.filtroCambios === 'procesados') {
       this.cambiosService.listarProcesados().subscribe({
-        next: d => { this.dataProcesados.set(d); this.cargandoCambios = false; },
+        next: d => { this.allProcesados = d; this.cargandoCambios = false; this.filtrarCambios(); },
         error: (err) => { console.error(err); this.cargandoCambios = false; }
       });
     } else {
       this.cambiosService.listarPendientes().subscribe({
-        next: d => { this.dataCambios.set(d); this.cargandoCambios = false; },
+        next: d => { this.allCambios = d; this.cargandoCambios = false; this.filtrarCambios(); },
         error: (err) => { console.error(err); this.cargandoCambios = false; }
       });
+    }
+  }
+
+  filtrarCambios() {
+    const q = this.busquedaCambios.toLowerCase().trim();
+    if (this.filtroCambios === 'procesados') {
+      let source: CambioPendiente[];
+      if (!q) { source = this.allProcesados; }
+      else {
+        source = this.allProcesados.filter(c =>
+          (c.idEntidad && c.idEntidad.toLowerCase().includes(q)) ||
+          (c.idSolicitante && String(c.idSolicitante).includes(q)) ||
+          (c.tipoCambio && c.tipoCambio.toLowerCase().includes(q)) ||
+          (c.estado && c.estado.toLowerCase().includes(q)) ||
+          (c.datosJson && c.datosJson.toLowerCase().includes(q))
+        );
+      }
+      this.dataProcesados.set(source);
+    } else {
+      let source: CambioPendiente[];
+      if (!q) { source = this.allCambios; }
+      else {
+        source = this.allCambios.filter(c =>
+          (c.idEntidad && c.idEntidad.toLowerCase().includes(q)) ||
+          (c.idSolicitante && String(c.idSolicitante).includes(q)) ||
+          (c.tipoCambio && c.tipoCambio.toLowerCase().includes(q)) ||
+          (c.datosJson && c.datosJson.toLowerCase().includes(q))
+        );
+      }
+      this.dataCambios.set(source);
     }
   }
 
@@ -331,7 +370,7 @@ export class DesktopDashboardComponent implements OnInit {
   }
 
   eliminarUsuario(id: number) {
-    if (!confirm('Eliminar este usuario? Esta accion es permanente (borrado logico).')) return;
+    if (!confirm('¿Eliminar este usuario?')) return;
     this.usuariosService.cambiarEstado(id, '3').subscribe({
       next: () => {
         this.loadDataForTab();
@@ -363,7 +402,7 @@ export class DesktopDashboardComponent implements OnInit {
       return;
     }
 
-    if (!confirm('¿Eliminar este registro? Esta acción es permanente (borrado lógico).')) return;
+    if (!confirm('¿Eliminar este registro?')) return;
     this.cambiarEstadoGenerico(endpoint, id, '3');
   }
 
@@ -460,10 +499,7 @@ export class DesktopDashboardComponent implements OnInit {
     if (tab !== 'resguardantes') {
       const idFieldMap: Record<string, string> = {
         marcas: 'idMarca',
-        lineas: 'idLinea',
-        provedores: 'idProvedor',
-        areas: 'idArea',
-        presentacion: 'idPresentacion'
+        areas: 'idArea'
       };
       const pkField = idFieldMap[tab];
       if (pkField) {
@@ -508,15 +544,31 @@ export class DesktopDashboardComponent implements OnInit {
     }, 400);
   }
 
+  onCoresguardanteAuto() {
+    const fkResguardante = this.showModalCreateActivo
+      ? this.newActivo.fkResguardante
+      : this.editActivoForm.fkResguardante;
+    if (!fkResguardante || fkResguardante == 1) {
+      if (this.showModalCreateActivo) {
+        (this.newActivo as any).coresguardante = 1;
+      } else {
+        this.editActivoForm.coresguardante = 1;
+      }
+    }
+  }
+
   openCreateActivo() {
     this.idActivoExiste.set(false);
     if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.newActivo = {
-      idActivo: '', nombre: '', descripcion: '', precio: undefined, existencias: 1, 
-      garantia: '', nSerie: '', fkMarca: '', fkProvedor: '', fkLinea: '', fkPresentacion: '',
-      fkArea: '', fkResguardante: undefined
+      idActivo: '', nombre: '', descripcion: '', modelo: '',
+      nSerie: '', fkMarca: '',
+      fkArea: '', fkResguardante: undefined,
+      coresguardante: undefined, estado: undefined
     };
+    this.coresguardante = null;
     this.selectedFiles = [];
+    this.clearSelectedFilesPreview();
     this.showModalCreateActivo = true;
 
     // Recargar catálogos para asegurar que los nuevos registros aparezcan en los selects
@@ -535,31 +587,59 @@ export class DesktopDashboardComponent implements OnInit {
     if (this.checkIdTimer) clearTimeout(this.checkIdTimer);
     this.showModalCreateActivo = false;
     this.selectedFiles = [];
+    this.clearSelectedFilesPreview();
   }
 
   onFileSelected(event: any) {
     if (event.target.files && event.target.files.length > 0) {
       const selected = Array.from(event.target.files) as File[];
       
-      // Validar máximo 5 fotos (incluyendo las ya existentes)
       const totalFotos = this.fotosActivo().length + selected.length;
       if (totalFotos > 5) {
         alert('Un producto solo puede tener un máximo de 5 fotos. Por favor, selecciona menos archivos.');
-        event.target.value = ''; // Limpiar el input
+        event.target.value = '';
         this.selectedFiles = [];
+        this.clearSelectedFilesPreview();
         return;
       }
 
       this.selectedFiles = selected;
+      this.clearSelectedFilesPreview();
+      const previews = selected.map(file => ({ file, url: URL.createObjectURL(file) }));
+      this.selectedFilesPreview.set(previews);
       console.log(`[DEBUG] ${this.selectedFiles.length} archivos seleccionados`);
     }
+  }
+
+  removeSelectedFile(index: number): void {
+    const previews = this.selectedFilesPreview();
+    if (index < 0 || index >= previews.length) return;
+    URL.revokeObjectURL(previews[index].url);
+    this.selectedFilesPreview.update(arr => arr.filter((_, i) => i !== index));
+    this.selectedFiles = this.selectedFiles.filter((_, i) => i !== index);
+  }
+
+  private clearSelectedFilesPreview(): void {
+    for (const p of this.selectedFilesPreview()) {
+      URL.revokeObjectURL(p.url);
+    }
+    this.selectedFilesPreview.set([]);
   }
 
   verDetalleActivo(item: any) {
     this.selectedActivo = item;
     this.fotosActivo.set([]);
     this.assignmentActivo.set(null);
+    this.observaciones.set([]);
+    this.nuevaObservacion = '';
     this.showModalDetalle = true;
+
+    if (this.dataUsuarios().length === 0) {
+      this.usuariosService.getAllUsuarios().subscribe({
+        next: d => this.dataUsuarios.set(d),
+        error: () => {}
+      });
+    }
     
     console.log(`[DEBUG] Viendo detalle de: ${item.idActivo}`);
 
@@ -585,6 +665,9 @@ export class DesktopDashboardComponent implements OnInit {
       }
     });
 
+    // Cargar observaciones del activo
+    this.cargarObservaciones();
+
     // Opcional: recargar catálogos en segundo plano para asegurar nombres actualizados
     this.loadCatalogosParaActivos().subscribe(data => this.updateCatalogLists(data));
   }
@@ -607,24 +690,15 @@ export class DesktopDashboardComponent implements OnInit {
     return u ? `${id} - ${u.nombre}${u.apellido ? ' ' + u.apellido : ''}` : `${id}`;
   }
 
+  getUserFullNameById(id: number | undefined): string {
+    if (!id) return '—';
+    const u = this.dataUsuarios().find(user => user.idUsuario === id);
+    return u ? `${u.nombre}${u.apellido ? ' ' + u.apellido : ''}` : `ID ${id}`;
+  }
+
   getMarcaName(id: string | undefined): string {
     const m = this.listMarcas().find(marca => marca.idMarca === id);
     return m?.nombre ? m.nombre : (id || 'N/A');
-  }
-
-  getProveedorName(id: string | undefined): string {
-    const p = this.listProveedores().find(prov => prov.idProvedor === id);
-    return p?.nombre ? p.nombre : (id || 'N/A');
-  }
-
-  getLineaName(id: string | undefined): string {
-    const l = this.listLineas().find(linea => linea.idLinea === id);
-    return l?.nombre ? l.nombre : (id || 'N/A');
-  }
-
-  getPresentacionName(id: string | undefined): string {
-    const pr = this.listPresentacion().find(pres => pres.idPresentacion === id);
-    return pr?.nombre ? pr.nombre : (id || 'N/A');
   }
 
   closeDetalle() {
@@ -632,6 +706,51 @@ export class DesktopDashboardComponent implements OnInit {
     this.selectedActivo = null;
     this.fotosActivo.set([]);
     this.assignmentActivo.set(null);
+    this.observaciones.set([]);
+  }
+
+  cargarObservaciones() {
+    if (!this.selectedActivo?.idActivo) return;
+    this.observacionesService.getAllByActivo(this.selectedActivo.idActivo).subscribe({
+      next: (data) => this.observaciones.set(data),
+      error: () => this.observaciones.set([])
+    });
+  }
+
+  agregarObservacion() {
+    if (!this.nuevaObservacion.trim() || !this.selectedActivo?.idActivo) return;
+    const data = {
+      fkActivo: this.selectedActivo.idActivo,
+      texto: this.nuevaObservacion.trim(),
+      creadoPor: this.miId
+    };
+    this.observacionesService.create(data).subscribe({
+      next: () => {
+        this.nuevaObservacion = '';
+        this.cargarObservaciones();
+      },
+      error: () => this.mostrarNotificacion('Error al agregar observacion', true)
+    });
+  }
+
+  eliminarObservacion(id: number) {
+    if (!confirm('Eliminar esta observacion?')) return;
+    this.observacionesService.delete(id).subscribe({
+      next: () => this.cargarObservaciones(),
+      error: () => this.mostrarNotificacion('Error al eliminar observacion', true)
+    });
+  }
+
+  getEstadoLabel(estado: string): string {
+    switch (estado) {
+      case '1': return 'Activo';
+      case '2': return 'Sobrante';
+      case '3': return 'Baja';
+      case '4': return 'Nuevo';
+      case '5': return 'Eliminado';
+      case '100': return 'Borrado';
+      default: return 'Desconocido';
+    }
   }
 
   openImagePreview(url: string) {
@@ -669,7 +788,9 @@ export class DesktopDashboardComponent implements OnInit {
     this.editActivoForm = { ...item };
     this.editActivoForm.fkArea = '';
     this.editActivoForm.fkResguardante = null;
+    this.coresguardante = null;
     this.selectedFiles = [];
+    this.clearSelectedFilesPreview();
     this.fotosActivo.set([]);
     this.assignmentActivo.set(null);
     this.showModalEditActivo = true;
@@ -692,6 +813,10 @@ export class DesktopDashboardComponent implements OnInit {
               this.editActivoForm.fkArea = asig.fkArea;
             if (!this.editActivoForm.fkResguardante)
               this.editActivoForm.fkResguardante = asig.fkResguardante;
+            if (!this.editActivoForm.coresguardante)
+              this.editActivoForm.coresguardante = asig.fkCoresguardante || undefined;
+            if (!this.editActivoForm.fkResguardante || this.editActivoForm.fkResguardante === 1)
+              this.editActivoForm.coresguardante = 1;
           }
         },
         error: (err) => console.error('[DEBUG] Error cargando datos de edición:', err)
@@ -703,6 +828,7 @@ export class DesktopDashboardComponent implements OnInit {
     this.showModalEditActivo = false;
     this.editActivoForm = {};
     this.selectedFiles = [];
+    this.clearSelectedFilesPreview();
     this.fotosAEliminar = [];
     this.fotosActivo.set([]);
   }
@@ -711,17 +837,10 @@ export class DesktopDashboardComponent implements OnInit {
     const a = this.editActivoForm;
     if (!a.fkArea) a.fkArea = '1';
     if (!a.fkResguardante) a.fkResguardante = 1;
-    if (!a.idActivo || !a.nombre || !a.descripcion || a.precio == null ||
-        !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
+    if (!a.coresguardante) a.coresguardante = 1;
+    if (!a.idActivo || !a.nombre || !a.descripcion ||
+        !a.nSerie || !a.fkMarca) {
       this.mostrarNotificacion('Completa todos los campos requeridos *', true);
-      return;
-    }
-    if (a.precio < 0) {
-      this.mostrarNotificacion('El precio no puede ser negativo.', true);
-      return;
-    }
-    if (a.existencias != null && a.existencias < 0) {
-      this.mostrarNotificacion('Las existencias no pueden ser negativas.', true);
       return;
     }
     
@@ -729,7 +848,7 @@ export class DesktopDashboardComponent implements OnInit {
       const id = this.editActivoForm.idActivo as string;
       // Subir fotos primero si hay, luego enviar el cambio con los filenames y fotos eliminadas
       this.uploadFilesForEditor((filenames) => {
-        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar };
+        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar, fkCoresguardante: this.editActivoForm.coresguardante };
         const cambio: CambioPendiente = {
           tipoCambio: 'ACTUALIZAR',
           entidad: 'activos',
@@ -814,6 +933,7 @@ export class DesktopDashboardComponent implements OnInit {
           ...this.assignmentActivo(),
           fkArea: fkArea || null,
           fkResguardante: fkResguardante || null,
+          fkCoresguardante: this.editActivoForm.coresguardante || null,
           ultimoActualizadoPor: this.miId
         };
         this.catalogoService.update('asignaciones', String(this.assignmentActivo()?.idAsignaciones), updatedAsig).subscribe({
@@ -825,6 +945,7 @@ export class DesktopDashboardComponent implements OnInit {
           fkActivo: id,
           fkArea: fkArea || null,
           fkResguardante: fkResguardante || null,
+          fkCoresguardante: this.editActivoForm.coresguardante || null,
           creadoPor: this.miId,
           ultimoActualizadoPor: this.miId,
           estado: "1"
@@ -850,28 +971,23 @@ export class DesktopDashboardComponent implements OnInit {
     const a = this.newActivo;
     if (!a.fkArea) a.fkArea = '1';
     if (!a.fkResguardante) (a as any).fkResguardante = 1;
-    if (!a.nombre || !a.descripcion || a.precio == null ||
-        !a.garantia || !a.nSerie || !a.fkProvedor || !a.fkMarca || !a.fkLinea || !a.fkPresentacion) {
+    if (!(a as any).coresguardante) (a as any).coresguardante = 1;
+    if (!a.estado) {
+      this.mostrarNotificacion('Selecciona un estado', true);
+      return;
+    }
+    if (!a.nombre || !a.descripcion ||
+        !a.nSerie || !a.fkMarca) {
       this.mostrarNotificacion('Completa todos los campos requeridos *', true);
-      return;
-    }
-    if (a.precio < 0) {
-      this.mostrarNotificacion('El precio no puede ser negativo.', true);
-      return;
-    }
-    if (a.existencias != null && a.existencias < 1) {
-      this.mostrarNotificacion('Las existencias deben ser mínimo 1.', true);
       return;
     }
     
     if (this.miRol === 2) {
-      const id = this.editActivoForm.idActivo as string;
       this.uploadFilesForEditor((filenames) => {
-        const payload = { ...this.editActivoForm, _fotosFilenames: filenames, _fotosEliminadas: this.fotosAEliminar };
+        const payload = { ...this.newActivo, _fotosFilenames: filenames, _fotosEliminadas: [], fkCoresguardante: (this.newActivo as any).coresguardante };
         const cambio: CambioPendiente = {
-          tipoCambio: 'ACTUALIZAR',
+          tipoCambio: 'CREAR',
           entidad: 'activos',
-          idEntidad: id,
           datosJson: JSON.stringify(payload)
         };
         
@@ -891,7 +1007,6 @@ export class DesktopDashboardComponent implements OnInit {
 
     this.newActivo.creadoPor = this.miId || undefined;
     this.newActivo.ultimoActualizadoPor = this.miId || undefined;
-    this.newActivo.estado = "1";
 
     // Verificar duplicado antes de guardar
     this.catalogoService.getById('activos', this.newActivo.idActivo!).subscribe({
@@ -933,14 +1048,14 @@ export class DesktopDashboardComponent implements OnInit {
               error: () => uploadNextFile(index + 1)
             });
           } else {
-            this.crearAsignacionFinal(idActivo, fkArea, fkResguardante);
+            this.crearAsignacionFinal(idActivo, fkArea, fkResguardante, (this.newActivo as any).coresguardante);
           }
         };
 
         if (this.selectedFiles.length > 0) {
           uploadNextFile(0);
         } else {
-          this.crearAsignacionFinal(idActivo, fkArea, fkResguardante);
+          this.crearAsignacionFinal(idActivo, fkArea, fkResguardante, (this.newActivo as any).coresguardante);
         }
       },
       error: (err) => {
@@ -950,12 +1065,13 @@ export class DesktopDashboardComponent implements OnInit {
     });
   }
 
-  private crearAsignacionFinal(idActivo: string, fkArea: string, fkResguardante: number | string) {
+  private crearAsignacionFinal(idActivo: string, fkArea: string, fkResguardante: number | string, fkCoresguardante?: any) {
     if (fkArea || fkResguardante) {
       const asignacionData = {
         fkActivo: idActivo,
         fkArea: fkArea || null,
         fkResguardante: fkResguardante || null,
+        fkCoresguardante: fkCoresguardante || null,
         creadoPor: this.miId,
         ultimoActualizadoPor: this.miId,
         estado: "1"
@@ -1034,10 +1150,21 @@ export class DesktopDashboardComponent implements OnInit {
     this.catalogoService.cambiarEstado(endpoint, id, nuevoEstado).subscribe({
       next: () => {
         this.loadDataForTab();
-        this.mostrarNotificacion(nuevoEstado === '3' ? 'Activo eliminado' : 'Estado actualizado');
+        this.mostrarNotificacion(nuevoEstado === '3' ? 'Activo dado de baja' : 'Estado actualizado');
       },
       error: console.error
     });
+  }
+
+  onEstadoChange(event: Event, item: any) {
+    const select = event.target as HTMLSelectElement;
+    const nuevoEstado = select.value;
+    if (item.estado === nuevoEstado) return;
+    if (nuevoEstado === '5' && !confirm('¿Estás seguro de que deseas eliminar este activo?')) {
+      select.value = item.estado;
+      return;
+    }
+    this.cambiarEstadoGenerico('activos', item.idActivo!, nuevoEstado);
   }
 
   logout() {
@@ -1102,6 +1229,7 @@ export class DesktopDashboardComponent implements OnInit {
                 if (result.asignaciones && result.asignaciones.length > 0) {
                   (activo as any).fkArea = result.asignaciones[0].fkArea;
                   (activo as any).fkResguardante = result.asignaciones[0].fkResguardante;
+                  (activo as any).fkCoresguardante = result.asignaciones[0].fkCoresguardante;
                 }
                 this.activoOriginal.set(activo);
               }
@@ -1128,10 +1256,8 @@ export class DesktopDashboardComponent implements OnInit {
   resumenCambiosTexto(): string {
     if (!this.activoOriginal() || !this.datosJsonParseado || this.cambioSeleccionado?.tipoCambio !== 'ACTUALIZAR') return '';
     const labels: Record<string, string> = {
-      nombre: 'nombre', descripcion: 'descripción', precio: 'precio',
-      existencias: 'existencias', garantia: 'garantía', nSerie: 'No. Serie',
-      fkMarca: 'marca', fkProvedor: 'proveedor', fkLinea: 'línea',
-      fkPresentacion: 'presentación', fkArea: 'área', fkResguardante: 'resguardante',
+      nombre: 'nombre', descripcion: 'descripción', modelo: 'modelo', nSerie: 'No. Serie',
+      fkMarca: 'marca', fkArea: 'área', fkResguardante: 'resguardante', fkCoresguardante: 'corresguardante',
       estado: 'estado'
     };
     const cambiados: string[] = [];

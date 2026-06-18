@@ -2,16 +2,12 @@ export interface Activo {
   idActivo?: string;
   nombre?: string;
   descripcion?: string;
-  precio?: number;
-  existencias?: number;
-  garantia?: string;
+  modelo?: string;
   nSerie?: string;
   fkMarca?: string;
-  fkProvedor?: string;
-  fkLinea?: string;
-  fkPresentacion?: string;
   fkArea?: string;
   fkResguardante?: string;
+  coresguardante?: number;
   estado?: string;
   creadoPor?: number;
   ultimoActualizadoPor?: number;

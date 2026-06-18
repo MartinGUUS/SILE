@@ -94,6 +94,7 @@ public class CambioPendienteService {
                             if (!asigsAnteriores.isEmpty()) {
                                 estadoAnterior.put("fkArea", asigsAnteriores.get(0).getFkArea());
                                 estadoAnterior.put("fkResguardante", asigsAnteriores.get(0).getFkResguardante());
+                                estadoAnterior.put("coresguardante", asigsAnteriores.get(0).getCoresguardante());
                             }
                         }
                     }
@@ -123,7 +124,10 @@ public class CambioPendienteService {
                     boolean hasArea = fkArea != null && !fkArea.isEmpty();
                     boolean hasResguardante = fkResguardanteStr != null && !fkResguardanteStr.isEmpty();
 
-                    if (hasArea || hasResguardante) {
+                    String coresguardanteStr = getTextFromJson(json, "coresguardante");
+                    boolean hasCoresguardante = coresguardanteStr != null && !coresguardanteStr.isEmpty();
+
+                    if (hasArea || hasResguardante || hasCoresguardante) {
                         Integer fkResguardante = null;
                         if (hasResguardante) {
                             try {
@@ -132,13 +136,24 @@ public class CambioPendienteService {
                                 fkResguardante = null;
                             }
                         }
+                        Integer coresguardante = null;
+                        if (hasCoresguardante) {
+                            try {
+                                coresguardante = Integer.parseInt(coresguardanteStr);
+                            } catch (NumberFormatException e) {
+                                coresguardante = null;
+                            }
+                        }
                         String effectiveArea = hasArea ? fkArea : null;
 
                         List<Asignaciones> asigs = asignacionesRepository.findByFkActivo(activo.getIdActivo());
                         if (!asigs.isEmpty()) {
                             Asignaciones asig = asigs.get(0);
-                            asig.setFkArea(effectiveArea);
-                            asig.setFkResguardante(fkResguardante);
+                            if (hasArea) asig.setFkArea(effectiveArea);
+                            if (hasResguardante || hasCoresguardante) {
+                                if (hasResguardante) asig.setFkResguardante(fkResguardante);
+                                if (hasCoresguardante) asig.setCoresguardante(coresguardante);
+                            }
                             asig.setUltimoActualizadoPor(idRevisor);
                             asignacionesRepository.save(asig);
                         } else {
@@ -146,6 +161,7 @@ public class CambioPendienteService {
                             newAsig.setFkActivo(activo.getIdActivo());
                             newAsig.setFkArea(effectiveArea);
                             newAsig.setFkResguardante(fkResguardante);
+                            newAsig.setCoresguardante(coresguardante);
                             newAsig.setEstado("1");
                             newAsig.setCreadoPor(idRevisor);
                             newAsig.setUltimoActualizadoPor(idRevisor);
@@ -194,6 +210,9 @@ public class CambioPendienteService {
 
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error al procesar JSON: " + e.getMessage(), e);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error interno al aprobar cambio: " + e.getMessage(), e);
         }
     }
 

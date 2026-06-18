@@ -364,6 +364,23 @@
   background: #fff7ed;
   color: #d97706;
 }
+.mob-badge-status.sobrante {
+  background: #fff7ed;
+  color: #d97706;
+}
+.mob-badge-status.baja {
+  background: #fef2f2;
+  color: #dc2626;
+}
+.mob-badge-status.nuevo {
+  background: #eff6ff;
+  color: #2563eb;
+}
+.mob-badge-status.eliminado {
+  background: #fef2f2;
+  color: #7f1d1d;
+  border: 1px solid #fecaca;
+}
 .mob-chip {
   font-size: 0.68rem;
   font-weight: 600;
@@ -762,6 +779,10 @@
   background: #fff;
   color: #171717;
   border: 1px solid #d4d4d4;
+}
+.mob-disabled {
+  opacity: 0.4;
+  pointer-events: none;
 }
 .mob-file-btn-outline svg {
   stroke: #171717;

@@ -4,9 +4,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import java.time.LocalDateTime;
 @Entity
 @Table(name = "activos")
 public class Activos {
@@ -21,33 +20,18 @@ public class Activos {
     @Column(name = "descripcion")
     private String descripcion;
 
-    @Column(name = "precio")
-    private Double precio;
-
-    @Column(name = "existencias")
-    private Integer existencias;
-
-    @Column(name = "garantia")
-    private String garantia;
-
     @JsonProperty("nSerie")
     @Column(name = "n_serie")
     private String nSerie;
 
-    @Column(name = "fk_provedor")
-    private String fkProvedor;
-
     @Column(name = "fk_marca")
     private String fkMarca;
 
-    @Column(name = "fk_linea")
-    private String fkLinea;
-
-    @Column(name = "fk_presentacion")
-    private String fkPresentacion;
-
     @Column(name = "estado")
     private String estado;
+
+    @Column(name = "modelo")
+    private String modelo;
 
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
@@ -88,44 +72,12 @@ public class Activos {
         this.descripcion = descripcion;
     }
 
-    public Double getPrecio() {
-        return precio;
-    }
-
-    public void setPrecio(Double precio) {
-        this.precio = precio;
-    }
-
-    public Integer getExistencias() {
-        return existencias;
-    }
-
-    public void setExistencias(Integer existencias) {
-        this.existencias = existencias;
-    }
-
-    public String getGarantia() {
-        return garantia;
-    }
-
-    public void setGarantia(String garantia) {
-        this.garantia = garantia;
-    }
-
     public String getNSerie() {
         return nSerie;
     }
 
     public void setNSerie(String nSerie) {
         this.nSerie = nSerie;
-    }
-
-    public String getFkProvedor() {
-        return fkProvedor;
-    }
-
-    public void setFkProvedor(String fkProvedor) {
-        this.fkProvedor = fkProvedor;
     }
 
     public String getFkMarca() {
@@ -136,28 +88,20 @@ public class Activos {
         this.fkMarca = fkMarca;
     }
 
-    public String getFkLinea() {
-        return fkLinea;
-    }
-
-    public void setFkLinea(String fkLinea) {
-        this.fkLinea = fkLinea;
-    }
-
-    public String getFkPresentacion() {
-        return fkPresentacion;
-    }
-
-    public void setFkPresentacion(String fkPresentacion) {
-        this.fkPresentacion = fkPresentacion;
-    }
-
     public String getEstado() {
         return estado;
     }
 
     public void setEstado(String estado) {
         this.estado = estado;
+    }
+
+    public String getModelo() {
+        return modelo;
+    }
+
+    public void setModelo(String modelo) {
+        this.modelo = modelo;
     }
 
     public LocalDateTime getCreadoEn() {

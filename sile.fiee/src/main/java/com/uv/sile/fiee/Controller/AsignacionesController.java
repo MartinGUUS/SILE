@@ -43,6 +43,7 @@ public class AsignacionesController {
             asignacion.setFkActivo(asignacionesDetails.getFkActivo());
             asignacion.setFkArea(asignacionesDetails.getFkArea());
             asignacion.setFkResguardante(asignacionesDetails.getFkResguardante());
+            asignacion.setCoresguardante(asignacionesDetails.getCoresguardante());
             return ResponseEntity.ok(asignacionesService.save(asignacion));
         } else {
             return ResponseEntity.notFound().build();

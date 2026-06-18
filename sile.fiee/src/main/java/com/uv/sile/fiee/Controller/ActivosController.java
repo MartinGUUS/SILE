@@ -19,10 +19,9 @@ public class ActivosController {
 
     @GetMapping
     public List<Activos> getAllActivos(@RequestParam(required = false) String estado) {
-        if (estado != null && !estado.equals("3")) {
+        if (estado != null) {
             return activosService.findByEstado(estado);
         }
-        // Por defecto (sin parámetro o estado=3 no permitido), excluye borrado lógico
         return activosService.findAll();
     }
 
@@ -45,14 +44,8 @@ public class ActivosController {
             Activos activo = activoOptional.get();
             activo.setNombre(activosDetails.getNombre());
             activo.setDescripcion(activosDetails.getDescripcion());
-            activo.setPrecio(activosDetails.getPrecio());
-            activo.setExistencias(activosDetails.getExistencias());
-            activo.setGarantia(activosDetails.getGarantia());
             activo.setNSerie(activosDetails.getNSerie());
-            activo.setFkProvedor(activosDetails.getFkProvedor());
             activo.setFkMarca(activosDetails.getFkMarca());
-            activo.setFkLinea(activosDetails.getFkLinea());
-            activo.setFkPresentacion(activosDetails.getFkPresentacion());
             return ResponseEntity.ok(activosService.save(activo));
         } else {
             return ResponseEntity.notFound().build();

@@ -1,5 +1,6 @@
 package com.uv.sile.fiee.Entitty;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -28,6 +29,10 @@ public class Asignaciones {
 
     @Column(name = "fk_resguardante")
     private Integer fkResguardante;
+
+    @JsonProperty("fkCoresguardante")
+    @Column(name = "coresguardante")
+    private Integer coresguardante;
 
     @Column(name = "creado_en", insertable = false, updatable = false)
     private LocalDateTime creadoEn;
@@ -82,6 +87,14 @@ public class Asignaciones {
 
     public void setFkResguardante(Integer fkResguardante) {
         this.fkResguardante = fkResguardante;
+    }
+
+    public Integer getCoresguardante() {
+        return coresguardante;
+    }
+
+    public void setCoresguardante(Integer coresguardante) {
+        this.coresguardante = coresguardante;
     }
 
     public LocalDateTime getCreadoEn() {
