@@ -13,9 +13,13 @@ import com.uv.sile.fiee.Repository.AsignacionesRepository;
 import com.uv.sile.fiee.Repository.CambioPendienteRepository;
 import com.uv.sile.fiee.Repository.FotosRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +42,9 @@ public class CambioPendienteService {
 
     @Autowired
     private ObjectMapper objectMapper;
+
+    @Value("${file.upload-dir}")
+    private String uploadDir;
 
     public CambioPendiente crearSolicitud(CambioPendiente.TipoCambio tipoCambio, String idEntidad, String datosJson, Integer idSolicitante) {
         CambioPendiente cambio = new CambioPendiente();
@@ -186,7 +193,18 @@ public class CambioPendienteService {
                     // Manejar fotos eliminadas (_fotosEliminadas)
                     if (json.has("_fotosEliminadas") && json.get("_fotosEliminadas").isArray()) {
                         for (JsonNode idFotoNode : json.get("_fotosEliminadas")) {
-                            fotosRepository.deleteById(idFotoNode.asInt());
+                            int idFoto = idFotoNode.asInt();
+                            Optional<Fotos> optFoto = fotosRepository.findById(idFoto);
+                            if (optFoto.isPresent()) {
+                                // Borrar archivo físico
+                                try {
+                                    Path filePath = Paths.get(uploadDir).resolve(optFoto.get().getFoto());
+                                    Files.deleteIfExists(filePath);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
+                            }
+                            fotosRepository.deleteById(idFoto);
                         }
                     }
 

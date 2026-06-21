@@ -872,13 +872,15 @@
           <div style="border: 1px solid var(--border-color); border-radius: 10px; padding: 1rem; margin-bottom: 1rem; background: var(--gray-50);">
             <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem;">
               <span style="display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 50%; background: #059669; color: #fff; font-size: 0.75rem; font-weight: 700;">1</span>
-              <strong style="color: #059669; font-size: 0.9rem;">Se mantienen ({{ fotosActualesCambio().length }})</strong>
+              <strong style="color: #059669; font-size: 0.9rem;">Se mantienen ({{ fotosActualesCambio().length - (datosJsonParseado?._fotosEliminadas?.length || 0) }})</strong>
             </div>
-            <ng-container *ngIf="fotosActualesCambio().length > 0; else sinFotosActuales">
+            <ng-container *ngIf="(fotosActualesCambio().length - (datosJsonParseado?._fotosEliminadas?.length || 0)) > 0; else sinFotosActuales">
               <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0.5rem;">
-                <div *ngFor="let f of fotosActualesCambio()" style="border-radius: 8px; overflow: hidden; border: 2px solid #059669; aspect-ratio: 1;">
+                <ng-container *ngFor="let f of fotosActualesCambio()">
+                  <div *ngIf="!datosJsonParseado?._fotosEliminadas?.includes(f.idFoto)" style="border-radius: 8px; overflow: hidden; border: 2px solid #059669; aspect-ratio: 1;">
                   <img [src]="'/fotos/view/' + f.foto" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" (click)="openImagePreview('/fotos/view/' + f.foto)" />
                 </div>
+                </ng-container>
               </div>
             </ng-container>
             <ng-template #sinFotosActuales>

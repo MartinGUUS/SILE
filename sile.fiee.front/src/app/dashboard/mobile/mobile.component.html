@@ -492,11 +492,13 @@
 
         <div class="mob-detail-divider">Gestion de Fotos</div>
         <div style="border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem;margin-bottom:0.5rem;background:#fafafa" *ngIf="cambioSeleccionado.tipoCambio !== 'CREAR'">
-          <strong style="color:#059669;font-size:0.8rem">1. Se mantienen ({{ fotosActualesCambio().length }})</strong>
-          <div class="mob-photo-gallery" *ngIf="fotosActualesCambio().length" style="margin-top:0.5rem">
-            <img *ngFor="let f of fotosActualesCambio()" [src]="'/fotos/view/' + f.foto" (click)="openImagePreview('/fotos/view/' + f.foto)" class="mob-thumb" style="border-color:#059669" />
+          <strong style="color:#059669;font-size:0.8rem">1. Se mantienen ({{ fotosActualesCambio().length - (datosJsonParseado?._fotosEliminadas?.length || 0) }})</strong>
+          <div class="mob-photo-gallery" *ngIf="(fotosActualesCambio().length - (datosJsonParseado?._fotosEliminadas?.length || 0)) > 0" style="margin-top:0.5rem">
+            <ng-container *ngFor="let f of fotosActualesCambio()">
+              <img *ngIf="!datosJsonParseado?._fotosEliminadas?.includes(f.idFoto)" [src]="'/fotos/view/' + f.foto" (click)="openImagePreview('/fotos/view/' + f.foto)" class="mob-thumb" style="border-color:#059669" />
+            </ng-container>
           </div>
-          <div *ngIf="!fotosActualesCambio().length" style="color:#a3a3a3;font-size:0.75rem;margin-top:0.25rem">Sin fotos actuales.</div>
+          <div *ngIf="(fotosActualesCambio().length - (datosJsonParseado?._fotosEliminadas?.length || 0)) === 0" style="color:#a3a3a3;font-size:0.75rem;margin-top:0.25rem">Sin fotos actuales.</div>
         </div>
         <div style="border:1px solid #e5e7eb;border-radius:10px;padding:0.75rem;margin-bottom:0.5rem;background:#ecfdf5" *ngIf="datosJsonParseado?._fotosFilenames?.length">
           <strong style="color:#2563eb;font-size:0.8rem">2. Se agregan ({{ datosJsonParseado._fotosFilenames.length }})</strong>
