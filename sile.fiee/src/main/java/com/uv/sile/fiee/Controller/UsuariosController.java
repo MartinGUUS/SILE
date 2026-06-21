@@ -6,6 +6,7 @@ import com.uv.sile.fiee.Service.UsuariosService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,14 +25,8 @@ public class UsuariosController {
     @Autowired
     private JwtService jwtService;
 
-    private Integer getIdUsuarioFromRequest(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7);
-            return jwtService.extractClaim(token, claims -> claims.get("idUsuario", Integer.class));
-        }
-        return null;
-    }
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     private Integer getFkRolFromRequest(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
@@ -117,5 +112,52 @@ public class UsuariosController {
             return ResponseEntity.ok(usuariosService.save(usuario));
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @PatchMapping("/{id}/password")
+    public ResponseEntity<Map<String, String>> cambiarPassword(@PathVariable Integer id, @RequestBody Map<String, String> body, HttpServletRequest request) {
+        Integer fkRolSolicitante = getFkRolFromRequest(request);
+        Integer idSolicitante = extractIdFromRequest(request);
+
+        Optional<Usuarios> usuarioOptional = usuariosService.findById(id);
+        if (!usuarioOptional.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Usuarios usuario = usuarioOptional.get();
+
+        boolean permitido = false;
+        // Admin ID=1 puede cambiar la contraseña de cualquiera
+        if (idSolicitante != null && idSolicitante == 1) {
+            permitido = true;
+        }
+        // Admin puede cambiar contraseña de editores y observadores (no admins)
+        else if (fkRolSolicitante != null && fkRolSolicitante == 1
+                && usuario.getFkRol() != null && usuario.getFkRol() != 1) {
+            permitido = true;
+        }
+
+        if (!permitido) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "No tienes permiso para cambiar esta contraseña"));
+        }
+
+        if (!body.containsKey("password") || body.get("password").trim().length() < 6) {
+            return ResponseEntity.badRequest().body(Map.of("error", "La contraseña debe tener al menos 6 caracteres"));
+        }
+
+        usuario.setContrasena(passwordEncoder.encode(body.get("password")));
+        usuariosService.save(usuario);
+
+        return ResponseEntity.ok(Map.of("message", "Contraseña actualizada"));
+    }
+
+    private Integer extractIdFromRequest(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return jwtService.extractClaim(token, claims -> claims.get("idUsuario", Integer.class));
+        }
+        return null;
     }
 }

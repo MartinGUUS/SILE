@@ -66,6 +66,7 @@ public class CambioPendienteService {
     }
 
     @Transactional
+    @SuppressWarnings("unchecked")
     public CambioPendiente aprobarCambio(Integer idCambio, Integer idRevisor) {
         CambioPendiente cambio = cambioPendienteRepository.findById(idCambio)
                 .orElseThrow(() -> new RuntimeException("Cambio no encontrado"));

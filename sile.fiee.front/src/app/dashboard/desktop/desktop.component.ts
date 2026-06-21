@@ -1127,6 +1127,18 @@ export class DesktopDashboardComponent implements OnInit {
     });
   }
 
+  cambiarPasswordUsuario(user: any) {
+    const nuevaPassword = prompt('Nueva contraseña para ' + user.nombre + ' ' + (user.apellido || '') + ':');
+    if (!nuevaPassword || nuevaPassword.trim().length < 6) {
+      if (nuevaPassword) this.mostrarNotificacion('La contraseña debe tener al menos 6 caracteres', true);
+      return;
+    }
+    this.usuariosService.cambiarPassword(user.idUsuario!, nuevaPassword.trim()).subscribe({
+      next: () => this.mostrarNotificacion('Contraseña actualizada'),
+      error: (err) => this.mostrarNotificacion(err.error?.error || 'Error al cambiar contraseña', true)
+    });
+  }
+
   cambiarEstadoGenerico(endpoint: string, id: string, nuevoEstado: string) {
     if (endpoint === 'activos' && this.miRol === 2) {
       const activo = this.dataActivos().find(a => a.idActivo === id);
@@ -1164,6 +1176,7 @@ export class DesktopDashboardComponent implements OnInit {
       select.value = item.estado;
       return;
     }
+    item.estado = nuevoEstado;
     this.cambiarEstadoGenerico('activos', item.idActivo!, nuevoEstado);
   }
 

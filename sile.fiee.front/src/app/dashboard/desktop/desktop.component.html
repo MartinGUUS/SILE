@@ -149,12 +149,12 @@
                       <ng-container *ngIf="editingId !== item.idActivo">
                         <button class="action-btn" (click)="verDetalleActivo(item)" style="flex:1;">Ver</button>
                         <button class="action-btn edit" *ngIf="miRol === 1 || miRol === 2" (click)="openEditActivo(item)" style="flex:1;">Editar</button>
-                        <select *ngIf="miRol === 1 || miRol === 2" [value]="item.estado" (change)="onEstadoChange($event, item)" style="flex:1;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem;background:var(--gray-50);cursor:pointer">
-                          <option value="1">Activo</option>
-                          <option value="3">Baja</option>
-                          <option value="5" *ngIf="miRol === 1">Eliminado</option>
-                          <option value="4">Nuevo</option>
-                          <option value="2">Sobrante</option>
+                        <select *ngIf="miRol === 1 || miRol === 2" (change)="onEstadoChange($event, item)" style="flex:1;padding:0.3rem 0.5rem;border-radius:6px;border:1px solid #e5e7eb;font-size:0.8rem;background:var(--gray-50);cursor:pointer">
+                          <option value="1" [selected]="item.estado === '1'">Activo</option>
+                          <option value="3" [selected]="item.estado === '3'">Baja</option>
+                          <option value="5" *ngIf="miRol === 1" [selected]="item.estado === '5'">Eliminado</option>
+                          <option value="4" [selected]="item.estado === '4'">Nuevo</option>
+                          <option value="2" [selected]="item.estado === '2'">Sobrante</option>
                         </select>
                       </ng-container>
                       <ng-container *ngIf="editingId === item.idActivo">
@@ -225,6 +225,7 @@
                     <td>
                       <ng-container *ngIf="editingId !== user.idUsuario">
                         <button class="action-btn edit" (click)="startEdit(user.idUsuario!, user)">Editar</button>
+                        <button *ngIf="miRol === 1 && user.idUsuario !== miId && (miId === 1 || user.fkRol !== 1)" class="action-btn" (click)="cambiarPasswordUsuario(user)">Contraseña</button>
                         <button 
                           *ngIf="user.estado === '2'" 
                           class="action-btn activate"
@@ -676,6 +677,7 @@
           </div>
 
           <div class="modal-actions" style="margin-top: 2rem">
+            <button class="action-btn danger" *ngIf="miRol === 1 && selectedActivo?.estado === '5'" (click)="cambiarEstadoGenerico('activos', selectedActivo!.idActivo!, '100'); closeDetalle()">Eliminar permanentemente</button>
             <button class="primary-btn" (click)="closeDetalle()">Cerrar</button>
           </div>
         </div>

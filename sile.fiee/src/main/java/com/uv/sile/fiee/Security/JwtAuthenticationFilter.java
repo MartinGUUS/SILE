@@ -60,6 +60,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         return;
                     }
 
+                    // Verificar que el rol en el token coincida con el rol actual en BD
+                    Integer fkRolToken = jwtService.extractClaim(token, claims -> claims.get("fkRol", Integer.class));
+                    String rolBD = userDetails.getAuthorities().iterator().next().getAuthority();
+                    int fkRolBD = "ROLE_ADMIN".equals(rolBD) ? 1 : "ROLE_EDITOR".equals(rolBD) ? 2 : 3;
+                    if (fkRolToken != null && fkRolToken != fkRolBD) {
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.setContentType("application/json");
+                        response.getWriter().write("{\"error\":\"Tus permisos han cambiado. Inicia sesión nuevamente.\"}");
+                        return;
+                    }
+
                     // 8. Crear autenticación y establecerla en el contexto de seguridad
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(

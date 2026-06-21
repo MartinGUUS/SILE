@@ -703,6 +703,7 @@ export class MobileDashboardComponent implements OnDestroy {
       select.value = item.estado;
       return;
     }
+    item.estado = nuevoEstado;
     this.cambiarEstadoActivo(item, nuevoEstado);
   }
 

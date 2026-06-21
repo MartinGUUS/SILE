@@ -118,7 +118,6 @@
           <option value="pendientes">Pendientes</option>
           <option value="procesados">Procesados</option>
         </select>
-        <span class="mob-pending-badge" *ngIf="filtroCambios === 'pendientes' && cantidadPendientes() > 0">{{ cantidadPendientes() }} pend.</span>
       </div>
 
       <!-- Loading -->
@@ -248,7 +247,8 @@
           <button class="mob-chip" (click)="agregarObservacion()" [disabled]="!nuevaObservacion.trim()" style="white-space: nowrap;">Agregar</button>
         </div>
         <div class="mob-modal-actions">
-          <button class="mob-btn mob-btn-outline" *ngIf="miRol === 1 || miRol === 2" (click)="openEditForm(selectedActivo!)">Editar</button>
+          <button class="mob-btn mob-btn-danger-outline" *ngIf="miRol === 1 && selectedActivo?.estado === '5'" (click)="cambiarEstadoActivo(selectedActivo!, '100'); showDetail = false">Eliminar permanentemente</button>
+          <button class="mob-btn mob-btn-outline" *ngIf="(miRol === 1 || miRol === 2) && selectedActivo?.estado !== '5'" (click)="openEditForm(selectedActivo!)">Editar</button>
           <button class="mob-btn" (click)="showDetail = false">Cerrar</button>
         </div>
       </div>
@@ -462,7 +462,7 @@
         <div class="mob-cambio-meta">
           <span class="mob-cambio-tipo" [class.crear]="cambioSeleccionado.tipoCambio === 'CREAR'" [class.editar]="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" [class.eliminar]="cambioSeleccionado.tipoCambio === 'ELIMINAR'">{{ cambioSeleccionado.tipoCambio }}</span>
           <span class="mob-cambio-meta-item"><strong>ID:</strong> {{ cambioSeleccionado.idEntidad || 'Nuevo' }}</span>
-          <span class="mob-cambio-meta-item"><strong>Solicitante ID:</strong> {{ cambioSeleccionado.idSolicitante }}</span>
+          <span class="mob-cambio-meta-item"><strong>Solicitante:</strong> {{ cambioSeleccionado.idSolicitante }} - {{ getUserFullNameById(cambioSeleccionado.idSolicitante) }}</span>
           <span class="mob-cambio-meta-item"><strong>Solicitado:</strong> {{ cambioSeleccionado.creadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
           <span *ngIf="cambioSeleccionado.tipoCambio === 'ACTUALIZAR'" class="mob-cambio-meta-item" [ngStyle]="{'color': datosJsonParseado?.estado === '3' ? '#dc2626' : (datosJsonParseado?.estado === '2' ? '#d97706' : (datosJsonParseado?.estado === '4' ? '#2563eb' : '#059669'))}">
             <strong>Nuevo estado:</strong> {{ datosJsonParseado?.estado === '1' ? 'Activo' : (datosJsonParseado?.estado === '2' ? 'Sobrante' : (datosJsonParseado?.estado === '3' ? 'Baja' : (datosJsonParseado?.estado === '4' ? 'Nuevo' : 'N/A'))) }}
@@ -470,7 +470,7 @@
           <span *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" class="mob-badge-status" [class.active]="cambioSeleccionado.estado === 'APROBADO'" [class.inactive]="cambioSeleccionado.estado === 'RECHAZADO'" style="margin-left:auto">{{ cambioSeleccionado.estado === 'APROBADO' ? 'Aprobado' : 'Rechazado' }}</span>
         </div>
         <div *ngIf="cambioSeleccionado.estado !== 'PENDIENTE'" class="mob-cambio-resultado">
-          <span><strong>Revisor ID:</strong> {{ cambioSeleccionado.idRevisor || '-' }}</span>
+          <span><strong>Revisor:</strong> {{ cambioSeleccionado.idRevisor ? cambioSeleccionado.idRevisor + ' - ' + getUserFullNameById(cambioSeleccionado.idRevisor) : '-' }}</span>
           <span><strong>Fecha:</strong> {{ cambioSeleccionado.actualizadoEn | date:'dd/MM/yyyy HH:mm' }}</span>
           <span *ngIf="cambioSeleccionado.comentario"><strong>Comentario:</strong> {{ cambioSeleccionado.comentario }}</span>
         </div>

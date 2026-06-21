@@ -29,4 +29,9 @@ export class UsuariosService {
   actualizar(id: number, data: any): Observable<any> {
     return this.http.put(`${this.apiUrl}/${id}`, data);
   }
+
+  // Cambiar contraseña
+  cambiarPassword(id: number, password: string): Observable<any> {
+    return this.http.patch(`${this.apiUrl}/${id}/password`, { password });
+  }
 }
