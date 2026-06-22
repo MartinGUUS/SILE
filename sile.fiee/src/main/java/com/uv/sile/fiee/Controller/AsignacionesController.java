@@ -1,7 +1,9 @@
 package com.uv.sile.fiee.Controller;
 
 import com.uv.sile.fiee.Entitty.Asignaciones;
+import com.uv.sile.fiee.Security.JwtService;
 import com.uv.sile.fiee.Service.AsignacionesService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +19,18 @@ public class AsignacionesController {
     @Autowired
     private AsignacionesService asignacionesService;
 
+    @Autowired
+    private JwtService jwtService;
+
+    private Integer extractUserId(HttpServletRequest request) {
+        String authHeader = request.getHeader("Authorization");
+        if (authHeader != null && authHeader.startsWith("Bearer ")) {
+            String token = authHeader.substring(7);
+            return jwtService.extractClaim(token, claims -> claims.get("idUsuario", Integer.class));
+        }
+        return null;
+    }
+
     @GetMapping
     public List<Asignaciones> getAllAsignaciones() {
         return asignacionesService.findAll();
@@ -30,13 +44,16 @@ public class AsignacionesController {
 
     // localhost:8080/asignaciones
     @PostMapping
-    public Asignaciones createAsignacion(@RequestBody Asignaciones asignaciones) {
+    public Asignaciones createAsignacion(@RequestBody Asignaciones asignaciones, HttpServletRequest request) {
+        Integer userId = extractUserId(request);
+        if (asignaciones.getCreadoPor() == null) asignaciones.setCreadoPor(userId);
+        asignaciones.setUltimoActualizadoPor(userId);
         return asignacionesService.save(asignaciones);
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<Asignaciones> updateAsignacion(@PathVariable Integer id,
-            @RequestBody Asignaciones asignacionesDetails) {
+            @RequestBody Asignaciones asignacionesDetails, HttpServletRequest request) {
         Optional<Asignaciones> asignacionOptional = asignacionesService.findById(id);
         if (asignacionOptional.isPresent()) {
             Asignaciones asignacion = asignacionOptional.get();
@@ -44,6 +61,7 @@ public class AsignacionesController {
             asignacion.setFkArea(asignacionesDetails.getFkArea());
             asignacion.setFkResguardante(asignacionesDetails.getFkResguardante());
             asignacion.setCoresguardante(asignacionesDetails.getCoresguardante());
+            asignacion.setUltimoActualizadoPor(extractUserId(request));
             return ResponseEntity.ok(asignacionesService.save(asignacion));
         } else {
             return ResponseEntity.notFound().build();

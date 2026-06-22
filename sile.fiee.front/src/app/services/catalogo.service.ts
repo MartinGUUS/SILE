@@ -38,4 +38,8 @@ export class CatalogoService {
   uploadFile(file: File): Observable<any> {
     return this.uploadService.uploadFoto(file);
   }
+
+  exportarActivos(): Observable<any> {
+    return this.http.get('/activos/exportar', { responseType: 'blob' } as any);
+  }
 }

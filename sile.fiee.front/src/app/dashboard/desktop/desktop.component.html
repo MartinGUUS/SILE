@@ -106,6 +106,7 @@
                   <option value="2">Sobrante</option>
                 </select>
                 <button class="primary-btn" *ngIf="miRol === 1 || miRol === 2" (click)="openCreateActivo()">Nuevo Activo</button>
+                <button class="primary-btn" *ngIf="miRol === 1" (click)="exportarActivos()" style="background: #6b7280;">Exportar</button>
               </div>
             </div>
 

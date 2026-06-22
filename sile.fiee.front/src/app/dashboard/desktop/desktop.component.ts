@@ -1185,6 +1185,20 @@ export class DesktopDashboardComponent implements OnInit {
     this.router.navigate(['/login']);
   }
 
+  exportarActivos() {
+    this.catalogoService.exportarActivos().subscribe({
+      next: (blob) => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'activos.xlsx';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      },
+      error: () => this.mostrarNotificacion('Error al exportar', true)
+    });
+  }
+
   /**
    * Sube los archivos seleccionados (selectedFiles) al servidor y devuelve
    * los nombres de archivo via callback. Si no hay archivos, callback con [].
